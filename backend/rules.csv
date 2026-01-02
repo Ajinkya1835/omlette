@@ -1,0 +1,42 @@
+violation_code,title,category,entity_type,act,section,authority,severity,compoundable,description
+AIR-001,Emission beyond permissible limits,AIR_POLLUTION,INDUSTRY,Air (Prevention and Control of Pollution) Act 1981,21,State Pollution Control Board,HIGH,false,Industrial emissions exceeding CPCB standards
+AIR-002,Operating without consent to operate,AIR_POLLUTION,INDUSTRY,Air Act 1981,21(4),State Pollution Control Board,CRITICAL,false,Industry operating without CTO
+AIR-003,Use of diesel generator without permission,AIR_POLLUTION,SHOP,Environment Protection Act 1986,15,State PCB,MEDIUM,true,Unauthorized DG set usage
+AIR-004,Stubble burning,AIR_POLLUTION,FARM,Environment Protection Act 1986,15,District Administration,HIGH,false,Crop residue burning
+AIR-005,Open burning of waste,AIR_POLLUTION,SHOP,Air Act 1981,19,Municipal Corporation,MEDIUM,true,Burning waste in open areas
+
+WATER-001,Discharge of untreated effluent,WATER_POLLUTION,INDUSTRY,Water Act 1974,24,State Pollution Control Board,CRITICAL,false,Untreated wastewater discharge
+WATER-002,Illegal drain discharge,WATER_POLLUTION,SHOP,Water Act 1974,24,Municipal Corporation,HIGH,true,Discharging waste into drains
+WATER-003,Groundwater extraction without permission,WATER_POLLUTION,FARM,Groundwater Regulation Act,5,Groundwater Authority,HIGH,false,Unauthorized borewell usage
+WATER-004,Contamination of surface water,WATER_POLLUTION,INDUSTRY,Water Act 1974,24,State PCB,CRITICAL,false,Polluting rivers or lakes
+WATER-005,Failure to install ETP,WATER_POLLUTION,INDUSTRY,Water Act 1974,25,State PCB,HIGH,false,ETP not installed
+
+WASTE-001,Improper solid waste disposal,SOLID_WASTE,SHOP,Solid Waste Management Rules 2016,15,Municipal Corporation,MEDIUM,true,Mixing waste streams
+WASTE-002,Plastic carry bag usage,PLASTIC_WASTE,SHOP,Plastic Waste Rules 2016,4,Municipal Corporation,MEDIUM,true,Banned plastic usage
+WASTE-003,Improper hazardous waste handling,HAZARDOUS_WASTE,INDUSTRY,Hazardous Waste Rules 2016,8,State PCB,CRITICAL,false,Unsafe hazardous waste storage
+WASTE-004,E-waste improper disposal,E_WASTE,INDUSTRY,E-Waste Rules 2022,9,State PCB,HIGH,false,E-waste sent to unauthorized recycler
+WASTE-005,Burning agricultural waste,SOLID_WASTE,FARM,Environment Protection Act 1986,15,District Authority,HIGH,false,Farm waste burning
+
+NOISE-001,Noise above permissible limits,NOISE_POLLUTION,SHOP,Noise Pollution Rules 2000,5,Police,MEDIUM,true,Loudspeakers beyond limits
+NOISE-002,Industrial noise violation,NOISE_POLLUTION,INDUSTRY,Noise Rules 2000,5,State PCB,HIGH,false,Machinery noise violation
+
+BILL-001,Failure to issue bill,NO_BILL_ISSUED,SHOP,CGST Act 2017,31,GST Department,MEDIUM,true,Bill not issued to customer
+BILL-002,GST evasion,GST_EVASION,SHOP,CGST Act 2017,122,GST Department,CRITICAL,false,Suppression of sales
+BILL-003,MRP overcharging,OVERCHARGING_MRP,SHOP,Legal Metrology Act 2009,36,Legal Metrology Dept,MEDIUM,true,Charging above MRP
+BILL-004,Fake invoicing,GST_EVASION,INDUSTRY,CGST Act 2017,122,GST Department,CRITICAL,false,Fake invoices created
+BILL-005,Incorrect weight measurement,LEGAL_METROLOGY,SHOP,Legal Metrology Act 2009,24,Legal Metrology Dept,MEDIUM,true,Faulty weighing scale
+
+UTIL-001,Electricity theft,ELECTRICITY_THEFT,SHOP,Electricity Act 2003,135,Electricity Board,CRITICAL,false,Illegal power tapping
+UTIL-002,Meter tampering,ELECTRICITY_THEFT,INDUSTRY,Electricity Act 2003,138,Electricity Board,CRITICAL,false,Tampered electricity meter
+UTIL-003,Unauthorized water connection,WATER_THEFT,SHOP,Municipal Act,187,Municipal Corporation,MEDIUM,true,Illegal water tapping
+
+LIC-001,Operating without trade license,LICENSE_EXPIRED,SHOP,Municipal Corporation Act,394,Municipal Corporation,HIGH,true,No trade license
+LIC-002,Expired factory license,LICENSE_EXPIRED,INDUSTRY,Factories Act 1948,6,Labour Department,HIGH,false,License expired
+LIC-003,No PCB consent,NO_CONSENT_PCB,INDUSTRY,Water Act 1974,25,State PCB,CRITICAL,false,No environmental clearance
+
+LAB-001,Unsafe working conditions,WORKER_SAFETY,INDUSTRY,Factories Act 1948,7A,Labour Department,HIGH,false,Lack of safety measures
+LAB-002,Child labour,CHILD_LABOUR,SHOP,Child Labour Act 1986,3,Labour Department,CRITICAL,false,Employment of minor
+LAB-003,Excessive working hours,WORKER_SAFETY,INDUSTRY,Factories Act 1948,51,Labour Department,MEDIUM,true,Overtime violations
+
+ANML-001,Animal cruelty,ANIMAL_CRUELTY,FARM,Prevention of Cruelty to Animals Act 1960,11,Animal Welfare Board,HIGH,false,Inhumane treatment of animals
+ANML-002,Improper dairy waste disposal,ANIMAL_CRUELTY,FARM,Environment Protection Act 1986,15,District Authority,MEDIUM,true,Improper manure disposal
