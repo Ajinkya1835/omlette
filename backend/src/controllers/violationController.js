@@ -20,7 +20,7 @@ export const createViolation = async (req, res) => {
       });
     }
 
-    const mediaFiles = req.files
+    const mediaFiles = Array.isArray(req.files)
       ? req.files.map((file) => ({
           path: file.path,
           type: file.mimetype.startsWith("image")
@@ -38,6 +38,7 @@ export const createViolation = async (req, res) => {
         longitude,
       },
       media: mediaFiles,
+      status: "AWAITING_OWNER",
     });
 
     res.status(201).json({
@@ -53,7 +54,7 @@ export const createViolation = async (req, res) => {
 };
 
 /* ======================================================
-   GET VIOLATIONS
+   GET VIOLATIONS (SANITIZED)
 ====================================================== */
 export const getViolations = async (req, res) => {
   try {
@@ -63,11 +64,21 @@ export const getViolations = async (req, res) => {
       filter.reportedBy = req.user._id;
     }
 
-    const violations = await Violation.find(filter).sort({
-      createdAt: -1,
-    });
+    const rawViolations = await Violation.find(filter)
+      .sort({ createdAt: -1 })
+      .lean(); // 🔑 IMPORTANT: convert to plain JS objects
 
-    res.json(violations);
+    // 🛡️ HARD GUARANTEE: only valid objects go out
+    const safeViolations = Array.isArray(rawViolations)
+      ? rawViolations.filter(
+          (v) =>
+            v &&
+            typeof v === "object" &&
+            typeof v.violationType === "string"
+        )
+      : [];
+
+    res.json(safeViolations);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
