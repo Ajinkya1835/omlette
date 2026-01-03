@@ -40,31 +40,35 @@ const violationSchema = new mongoose.Schema(
     ],
 
     // 🔐 AUTOMATED DECISION SNAPSHOT (IMMUTABLE)
-    decision: {
-      decision: {
-        type: String, // FINE / NOTICE / REVIEW
-      },
-      amount: {
-        type: Number,
-        default: 0,
-      },
-      ruleApplied: {
-        type: String, // violation_code
-      },
-      ruleSnapshot: {
-        title: String,
-        act: String,
-        section: String,
-        authority: String,
-        severity: String,
-      },
-      aiConfidence: {
-        type: Number,
-      },
-      requiresHuman: {
-        type: Boolean,
-        default: false,
-      },
+    // backend/src/models/Violation.js - UPDATE decision schema
+   decision: {
+  decision: {
+    type: String,
+  },
+  amount: {
+    type: Number,
+    default: 0,
+  },
+  ruleApplied: {
+    type: String,
+  },
+  ruleSnapshot: {
+    title: String,
+    act: String,
+    section: String,
+    authority: String,
+    severity: String,
+  },
+  aiConfidence: {
+    type: Number,
+  },
+  requiresHuman: {
+    type: Boolean,
+    default: false,
+  },
+  overrideReason: {
+    type: String,
+  },
     },
 
     // 🔁 STATUS STATE MACHINE
