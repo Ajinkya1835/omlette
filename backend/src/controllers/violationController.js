@@ -21,7 +21,7 @@ export const createViolation = async (req, res) => {
         latitude,
         longitude,
       },
-      media: [],
+      media: mediaFiles,
       status: "REPORTED",
     });
 
@@ -215,3 +215,10 @@ export const officerOverride = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+const mediaFiles = req.files
+  ? req.files.map((file) => ({
+      path: file.path,
+      type: file.mimetype.startsWith("image") ? "IMAGE" : "VIDEO",
+    }))
+  : [];

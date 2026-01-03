@@ -15,6 +15,8 @@ app.use("/api/violations", violationRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/rules", ruleRoutes);
+app.use("/uploads", express.static("uploads"));
+
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
