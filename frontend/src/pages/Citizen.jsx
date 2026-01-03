@@ -99,7 +99,6 @@ function Citizen() {
     files.forEach((f) => formData.append("media", f));
 
     try {
-      // ✅ Using the clean apiUpload helper
       await apiUpload("/api/violations", formData);
 
       setMessage("✅ Violation reported successfully!");
@@ -126,20 +125,48 @@ function Citizen() {
 
   /* ---------- UI ---------- */
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px" }}>
-      <h2 style={{ marginBottom: "10px" }}>🏛️ Citizen Dashboard</h2>
-      <p style={{ color: "#666", marginBottom: "20px" }}>
-        Report environmental violations in your area
-      </p>
+    <div style={{ 
+      maxWidth: 1000, 
+      margin: "0 auto", 
+      padding: "30px 20px",
+      backgroundColor: "#f5f7fa"
+    }}>
+      {/* Header */}
+      <div style={{
+        backgroundColor: "white",
+        padding: "25px",
+        borderRadius: "12px",
+        marginBottom: "25px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          marginBottom: "8px",
+          color: "#1a202c",
+          fontSize: "28px",
+          fontWeight: "600"
+        }}>
+          🏛️ Citizen Dashboard
+        </h2>
+        <p style={{ 
+          color: "#718096", 
+          margin: 0,
+          fontSize: "15px"
+        }}>
+          Report environmental violations in your area
+        </p>
+      </div>
 
       {/* Location Status */}
       <div
         style={{
-          padding: "10px 15px",
-          backgroundColor: locationStatus.includes("✓") ? "#d4edda" : "#fff3cd",
-          border: `1px solid ${locationStatus.includes("✓") ? "#c3e6cb" : "#ffeaa7"}`,
-          borderRadius: "5px",
-          marginBottom: "20px",
+          padding: "14px 18px",
+          backgroundColor: locationStatus.includes("✓") ? "#d1fae5" : "#fef3c7",
+          border: `1px solid ${locationStatus.includes("✓") ? "#6ee7b7" : "#fcd34d"}`,
+          borderRadius: "8px",
+          marginBottom: "25px",
+          color: locationStatus.includes("✓") ? "#065f46" : "#92400e",
+          fontWeight: "500"
         }}
       >
         📍 {locationStatus}
@@ -149,12 +176,13 @@ function Citizen() {
       {error && (
         <div
           style={{
-            padding: "15px",
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            border: "1px solid #f5c6cb",
-            borderRadius: "5px",
-            marginBottom: "20px",
+            padding: "16px 20px",
+            backgroundColor: "#fee2e2",
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            marginBottom: "25px",
+            fontWeight: "500"
           }}
         >
           ⚠️ {error}
@@ -165,12 +193,13 @@ function Citizen() {
       {message && (
         <div
           style={{
-            padding: "15px",
-            backgroundColor: "#d4edda",
-            color: "#155724",
-            border: "1px solid #c3e6cb",
-            borderRadius: "5px",
-            marginBottom: "20px",
+            padding: "16px 20px",
+            backgroundColor: "#d1fae5",
+            color: "#065f46",
+            border: "1px solid #6ee7b7",
+            borderRadius: "8px",
+            marginBottom: "25px",
+            fontWeight: "500"
           }}
         >
           {message}
@@ -180,24 +209,33 @@ function Citizen() {
       {/* Report Form */}
       <div
         style={{
-          backgroundColor: "#f8f9fa",
-          padding: "25px",
-          borderRadius: "8px",
-          marginBottom: "30px",
+          backgroundColor: "white",
+          padding: "30px",
+          borderRadius: "12px",
+          marginBottom: "35px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: "20px" }}>
+        <h3 style={{ 
+          marginTop: 0, 
+          marginBottom: "25px",
+          color: "#1a202c",
+          fontSize: "22px",
+          fontWeight: "600"
+        }}>
           📝 Report a Violation
         </h3>
         
         <form onSubmit={handleSubmit}>
           {/* Category Select */}
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "24px" }}>
             <label
               style={{
                 display: "block",
-                marginBottom: "8px",
-                fontWeight: "500",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
               }}
             >
               1. Select Category:
@@ -210,10 +248,14 @@ function Citizen() {
               }}
               style={{
                 width: "100%",
-                padding: "10px",
-                fontSize: "16px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "12px 14px",
+                fontSize: "15px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                backgroundColor: "white",
+                color: "#2d3748",
+                cursor: "pointer",
+                transition: "border-color 0.2s"
               }}
             >
               <option value="">-- Choose a category --</option>
@@ -226,12 +268,14 @@ function Citizen() {
           </div>
 
           {/* Rule Select */}
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "24px" }}>
             <label
               style={{
                 display: "block",
-                marginBottom: "8px",
-                fontWeight: "500",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
               }}
             >
               2. Select Violation Type:
@@ -242,12 +286,13 @@ function Citizen() {
               onChange={(e) => setSelectedRuleCode(e.target.value)}
               style={{
                 width: "100%",
-                padding: "10px",
-                fontSize: "16px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                backgroundColor: !selectedCategory ? "#e9ecef" : "white",
-                cursor: !selectedCategory ? "not-allowed" : "pointer",
+                padding: "12px 14px",
+                fontSize: "15px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                backgroundColor: !selectedCategory ? "#f7fafc" : "white",
+                color: !selectedCategory ? "#a0aec0" : "#2d3748",
+                cursor: !selectedCategory ? "not-allowed" : "pointer"
               }}
             >
               <option value="">-- Choose a violation type --</option>
@@ -262,12 +307,14 @@ function Citizen() {
           </div>
 
           {/* Description */}
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "24px" }}>
             <label
               style={{
                 display: "block",
-                marginBottom: "8px",
-                fontWeight: "500",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
               }}
             >
               3. Description (Optional):
@@ -279,22 +326,26 @@ function Citizen() {
               rows={4}
               style={{
                 width: "100%",
-                padding: "10px",
-                fontSize: "16px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "12px 14px",
+                fontSize: "15px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
                 fontFamily: "inherit",
+                color: "#2d3748",
+                resize: "vertical"
               }}
             />
           </div>
 
           {/* File Upload */}
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "28px" }}>
             <label
               style={{
                 display: "block",
-                marginBottom: "8px",
-                fontWeight: "500",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
               }}
             >
               4. Upload Evidence (Photos/Videos):
@@ -306,13 +357,20 @@ function Citizen() {
               onChange={(e) => setFiles([...e.target.files])}
               style={{
                 width: "100%",
-                padding: "10px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "12px 14px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                fontSize: "15px",
+                cursor: "pointer"
               }}
             />
             {files.length > 0 && (
-              <small style={{ color: "#666", marginTop: "5px", display: "block" }}>
+              <small style={{ 
+                color: "#718096", 
+                marginTop: "8px", 
+                display: "block",
+                fontSize: "14px"
+              }}>
                 📎 {files.length} file(s) selected
               </small>
             )}
@@ -322,18 +380,27 @@ function Citizen() {
           <button
             type="submit"
             style={{
-              padding: "12px 30px",
-              backgroundColor: "#007bff",
+              padding: "14px 32px",
+              backgroundColor: "#3182ce",
               color: "white",
               border: "none",
-              borderRadius: "5px",
+              borderRadius: "8px",
               fontSize: "16px",
-              fontWeight: "500",
+              fontWeight: "600",
               cursor: "pointer",
-              transition: "background-color 0.3s",
+              transition: "all 0.2s",
+              boxShadow: "0 2px 4px rgba(49, 130, 206, 0.2)"
             }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#0056b3")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#007bff")}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = "#2c5282";
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 4px 8px rgba(49, 130, 206, 0.3)";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = "#3182ce";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 2px 4px rgba(49, 130, 206, 0.2)";
+            }}
           >
             🚀 Submit Violation Report
           </button>
@@ -341,27 +408,45 @@ function Citizen() {
       </div>
 
       {/* My Complaints Section */}
-      <div>
-        <h3 style={{ marginBottom: "15px" }}>📋 My Complaints</h3>
+      <div style={{
+        backgroundColor: "white",
+        padding: "30px",
+        borderRadius: "12px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+      }}>
+        <h3 style={{ 
+          marginTop: 0,
+          marginBottom: "20px",
+          color: "#1a202c",
+          fontSize: "22px",
+          fontWeight: "600"
+        }}>
+          📋 My Complaints
+        </h3>
 
         {loading ? (
-          <p style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+          <p style={{ 
+            textAlign: "center", 
+            padding: "40px", 
+            color: "#718096",
+            fontSize: "16px"
+          }}>
             ⏳ Loading your complaints...
           </p>
         ) : violations.length === 0 ? (
           <div
             style={{
               textAlign: "center",
-              padding: "40px",
-              backgroundColor: "#f8f9fa",
+              padding: "50px 20px",
+              backgroundColor: "#f7fafc",
               borderRadius: "8px",
-              color: "#666",
+              color: "#718096",
             }}
           >
-            <p style={{ fontSize: "18px", marginBottom: "10px" }}>
+            <p style={{ fontSize: "18px", marginBottom: "10px", fontWeight: "500" }}>
               📭 No complaints submitted yet
             </p>
-            <p style={{ fontSize: "14px" }}>
+            <p style={{ fontSize: "15px", margin: 0 }}>
               Your reported violations will appear here
             </p>
           </div>
@@ -370,22 +455,44 @@ function Citizen() {
             <table
               style={{
                 width: "100%",
-                borderCollapse: "collapse",
+                borderCollapse: "separate",
+                borderSpacing: 0,
                 backgroundColor: "white",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                 borderRadius: "8px",
                 overflow: "hidden",
+                border: "1px solid #e2e8f0"
               }}
             >
               <thead>
-                <tr style={{ backgroundColor: "#f8f9fa" }}>
-                  <th style={{ padding: "15px", textAlign: "left", borderBottom: "2px solid #dee2e6" }}>
+                <tr style={{ backgroundColor: "#f7fafc" }}>
+                  <th style={{ 
+                    padding: "16px 20px", 
+                    textAlign: "left", 
+                    borderBottom: "2px solid #e2e8f0",
+                    color: "#2d3748",
+                    fontWeight: "600",
+                    fontSize: "14px"
+                  }}>
                     📅 Date
                   </th>
-                  <th style={{ padding: "15px", textAlign: "left", borderBottom: "2px solid #dee2e6" }}>
+                  <th style={{ 
+                    padding: "16px 20px", 
+                    textAlign: "left", 
+                    borderBottom: "2px solid #e2e8f0",
+                    color: "#2d3748",
+                    fontWeight: "600",
+                    fontSize: "14px"
+                  }}>
                     🏷️ Rule Code
                   </th>
-                  <th style={{ padding: "15px", textAlign: "left", borderBottom: "2px solid #dee2e6" }}>
+                  <th style={{ 
+                    padding: "16px 20px", 
+                    textAlign: "left", 
+                    borderBottom: "2px solid #e2e8f0",
+                    color: "#2d3748",
+                    fontWeight: "600",
+                    fontSize: "14px"
+                  }}>
                     📊 Status
                   </th>
                 </tr>
@@ -395,10 +502,17 @@ function Citizen() {
                   <tr
                     key={v?._id || i}
                     style={{
-                      borderBottom: "1px solid #dee2e6",
+                      borderBottom: i !== violations.length - 1 ? "1px solid #e2e8f0" : "none",
+                      transition: "background-color 0.2s"
                     }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f7fafc"}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
                   >
-                    <td style={{ padding: "15px" }}>
+                    <td style={{ 
+                      padding: "16px 20px",
+                      color: "#4a5568",
+                      fontSize: "14px"
+                    }}>
                       {v?.createdAt
                         ? new Date(v.createdAt).toLocaleString("en-US", {
                             year: "numeric",
@@ -409,32 +523,37 @@ function Citizen() {
                           })
                         : "—"}
                     </td>
-                    <td style={{ padding: "15px", fontWeight: "500" }}>
+                    <td style={{ 
+                      padding: "16px 20px", 
+                      fontWeight: "600",
+                      color: "#2d3748",
+                      fontSize: "14px"
+                    }}>
                       {v?.violationType ?? "UNKNOWN"}
                     </td>
-                    <td style={{ padding: "15px" }}>
+                    <td style={{ padding: "16px 20px" }}>
                       <span
                         style={{
-                          padding: "5px 12px",
+                          padding: "6px 14px",
                           borderRadius: "20px",
-                          fontSize: "14px",
-                          fontWeight: "500",
+                          fontSize: "13px",
+                          fontWeight: "600",
                           backgroundColor:
                             v?.status === "AWAITING_OWNER"
-                              ? "#fff3cd"
+                              ? "#fef3c7"
                               : v?.status === "PAID"
-                              ? "#d4edda"
+                              ? "#d1fae5"
                               : v?.status === "OBJECTED"
-                              ? "#f8d7da"
-                              : "#e9ecef",
+                              ? "#fee2e2"
+                              : "#f3f4f6",
                           color:
                             v?.status === "AWAITING_OWNER"
-                              ? "#856404"
+                              ? "#92400e"
                               : v?.status === "PAID"
-                              ? "#155724"
+                              ? "#065f46"
                               : v?.status === "OBJECTED"
-                              ? "#721c24"
-                              : "#495057",
+                              ? "#991b1b"
+                              : "#4b5563",
                         }}
                       >
                         {v?.status ?? "PENDING"}

@@ -31,11 +31,11 @@ const violationSchema = new mongoose.Schema(
       },
     },
 
-    // Evidence (future use)
+    // Evidence - Keep as 'url' (file.path gets stored here)
     media: [
       {
-        url: String,
-        type: String, // image / video
+        url: String,   // Stores the file path from multer
+        type: String,  // "IMAGE" or "VIDEO"
       },
     ],
 

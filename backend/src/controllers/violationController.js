@@ -1,5 +1,6 @@
 import Violation from "../models/Violation.js";
 
+
 /* ======================================================
    CREATE VIOLATION (Citizen)
 ====================================================== */
@@ -20,9 +21,10 @@ export const createViolation = async (req, res) => {
       });
     }
 
+    // ✅ FIX: Use 'url' instead of 'path' to match schema
     const mediaFiles = Array.isArray(req.files)
       ? req.files.map((file) => ({
-          path: file.path,
+          url: file.path,  // Changed from 'path' to 'url'
           type: file.mimetype.startsWith("image")
             ? "IMAGE"
             : "VIDEO",
@@ -102,7 +104,7 @@ export const objectViolation = async (req, res) => {
 /* ======================================================
    OFFICER ACTIONS (STUBS)
 ====================================================== */
-export const officerConfirm = async (req, res) => {
+/*export const officerConfirm = async (req, res) => {
   res.json({
     message: "officerConfirm (to be implemented)",
   });
@@ -113,3 +115,91 @@ export const officerOverride = async (req, res) => {
     message: "officerOverride (to be implemented)",
   });
 };
+
+
+
+
+/* ======================================================
+   OFFICER: GET OBJECTED VIOLATIONS
+====================================================== */
+export const getOfficerViolations = async (req, res) => {
+  try {
+    if (req.user.role !== "OFFICER") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const violations = await Violation.find({
+      status: "OBJECTED",
+    })
+      .sort({ createdAt: -1 })
+      .populate("reportedBy", "name email")
+      .lean();
+
+    res.json(violations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ======================================================
+   OFFICER: CONFIRM VIOLATION
+====================================================== */
+export const officerConfirm = async (req, res) => {
+  try {
+    if (req.user.role !== "OFFICER") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const violation = await Violation.findById(req.params.id);
+    if (!violation) {
+      return res.status(404).json({ message: "Violation not found" });
+    }
+
+    violation.status = "CLOSED";
+    violation.decision = {
+      ...violation.decision,
+      decision: "CONFIRMED",
+      requiresHuman: true,
+    };
+
+    await violation.save();
+
+    res.json({ message: "Violation confirmed and closed", violation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ======================================================
+   OFFICER: OVERRIDE VIOLATION
+====================================================== */
+export const officerOverride = async (req, res) => {
+  try {
+    if (req.user.role !== "OFFICER") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { reason } = req.body;
+
+    const violation = await Violation.findById(req.params.id);
+    if (!violation) {
+      return res.status(404).json({ message: "Violation not found" });
+    }
+
+    violation.status = "CLOSED";
+    violation.decision = {
+      ...violation.decision,
+      decision: "OVERRIDDEN",
+      requiresHuman: true,
+    };
+
+    violation.overrideReason = reason || "No reason provided";
+
+    await violation.save();
+
+    res.json({ message: "Violation overridden and closed", violation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

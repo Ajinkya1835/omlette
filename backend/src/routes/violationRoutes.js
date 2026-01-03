@@ -7,6 +7,7 @@ import {
   getViolations,
   acceptViolation,
   objectViolation,
+  getOfficerViolations,
   officerConfirm,
   officerOverride,
 } from "../controllers/violationController.js";
@@ -19,7 +20,9 @@ router.get("/", protect, getViolations);
 
 router.post("/:id/accept", protect, acceptViolation);
 router.post("/:id/object", protect, objectViolation);
+router.get("/officer", protect, getOfficerViolations);
+//router.post("/:id/confirm", protect, officerConfirm);
+//router.post("/:id/override", protect, officerOverride);
 router.post("/:id/confirm", protect, officerConfirm);
 router.post("/:id/override", protect, officerOverride);
-
 export default router;
