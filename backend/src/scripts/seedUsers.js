@@ -1,3 +1,4 @@
+// backend/src/scripts/seedUsers.js
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
@@ -13,11 +14,11 @@ const users = [
     role: "CITIZEN",
   },
   {
-  name: "Test Permit Holder",
-  email: "owner@test.com",
-  password: "123456",
-  role: "PERMIT_HOLDER",
-   },
+    name: "Test Permit Holder",
+    email: "owner@test.com",
+    password: "123456",
+    role: "PERMIT_HOLDER",  // ✅ CHANGED FROM "OWNER"
+  },
   {
     name: "Test Officer",
     email: "officer@test.com",
@@ -45,7 +46,7 @@ async function seed() {
       });
     }
 
-    console.log("Dummy users created successfully");
+    console.log("✅ Dummy users created successfully");
     process.exit();
   } catch (err) {
     console.error(err);

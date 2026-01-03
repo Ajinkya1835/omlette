@@ -15,8 +15,9 @@ function App() {
     return <Citizen />;
   }
 
-  if (user.role === "OWNER") {
-    return <Owner />;
+  // frontend/src/App.jsx - UPDATE THE OWNER CONDITION
+  if (user.role === "PERMIT_HOLDER") {
+   return <Owner />;
   }
 
   if (user.role === "OFFICER") {
