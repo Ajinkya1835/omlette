@@ -2,22 +2,26 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../api/api";
 
 function Citizen() {
-  // Rule data
+  /* ---------------- RULE DATA ---------------- */
   const [rules, setRules] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedRule, setSelectedRule] = useState(null);
 
-  // Form fields
+  /* ---------------- FORM ---------------- */
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState([]);
 
-  // Location
+  /* ---------------- LOCATION ---------------- */
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [locationStatus, setLocationStatus] = useState("Detecting location…");
 
-  // UI feedback
+  /* ---------------- STATUS VIEW ---------------- */
+  const [violations, setViolations] = useState([]);
+  const [loadingViolations, setLoadingViolations] = useState(true);
+
+  /* ---------------- UI ---------------- */
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -59,12 +63,29 @@ function Citizen() {
     );
   }, []);
 
+  /* ---------------- FETCH MY VIOLATIONS ---------------- */
+  async function fetchMyViolations() {
+    try {
+      setLoadingViolations(true);
+      const data = await apiRequest("/api/violations");
+      setViolations(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingViolations(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchMyViolations();
+  }, []);
+
   /* ---------------- FILTER RULES ---------------- */
   const filteredRules = rules.filter(
     (r) => r.category === selectedCategory
   );
 
-  /* ---------------- SUBMIT HANDLER ---------------- */
+  /* ---------------- SUBMIT ---------------- */
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -115,6 +136,9 @@ function Citizen() {
       setSelectedRule(null);
       setDescription("");
       setFiles([]);
+
+      // Refresh status list
+      fetchMyViolations();
     } catch (err) {
       setError(err.message);
     }
@@ -122,9 +146,10 @@ function Citizen() {
 
   /* ---------------- UI ---------------- */
   return (
-    <div style={{ maxWidth: 650 }}>
+    <div style={{ maxWidth: 800 }}>
       <h2>Citizen Dashboard</h2>
 
+      {/* ---------------- REPORT FORM ---------------- */}
       <h3>Report a Violation</h3>
 
       <p>
@@ -141,9 +166,7 @@ function Citizen() {
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <form onSubmit={handleSubmit}>
-        {/* CATEGORY */}
-        <label>Category</label>
-        <br />
+        <label>Category</label><br />
         <select
           value={selectedCategory}
           onChange={(e) => {
@@ -153,17 +176,13 @@ function Citizen() {
         >
           <option value="">Select category</option>
           {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
+            <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
 
         <br /><br />
 
-        {/* RULE */}
-        <label>Rule</label>
-        <br />
+        <label>Rule</label><br />
         <select
           disabled={!selectedCategory}
           value={selectedRule?.violation_code || ""}
@@ -185,9 +204,7 @@ function Citizen() {
 
         <br /><br />
 
-        {/* DESCRIPTION */}
-        <label>Description (optional)</label>
-        <br />
+        <label>Description (optional)</label><br />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -195,9 +212,7 @@ function Citizen() {
 
         <br /><br />
 
-        {/* FILE UPLOAD */}
-        <label>Upload Evidence (Photo / Video)</label>
-        <br />
+        <label>Upload Evidence</label><br />
         <input
           type="file"
           multiple
@@ -207,13 +222,38 @@ function Citizen() {
 
         <br /><br />
 
-        <button
-          type="submit"
-          disabled={latitude === null || longitude === null}
-        >
+        <button type="submit" disabled={!latitude || !longitude}>
           Submit Violation
         </button>
       </form>
+
+      {/* ---------------- STATUS VIEW ---------------- */}
+      <h3 style={{ marginTop: 40 }}>My Complaints</h3>
+
+      {loadingViolations ? (
+        <p>Loading...</p>
+      ) : violations.length === 0 ? (
+        <p>No complaints submitted yet.</p>
+      ) : (
+        <table border="1" cellPadding="8" width="100%">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Rule</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {violations.map((v) => (
+              <tr key={v._id}>
+                <td>{new Date(v.createdAt).toLocaleString()}</td>
+                <td>{v.violationType}</td>
+                <td>{v.status || "PENDING"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
