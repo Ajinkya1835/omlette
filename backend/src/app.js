@@ -17,5 +17,12 @@ app.use("/api/test", testRoutes);
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "PVMS backend is live",
+    time: new Date().toISOString()
+  });
+});
 
 export default app;
