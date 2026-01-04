@@ -6,7 +6,7 @@ import OwnerProfile from "./OwnerProfile";
 import OwnerProperties from "./OwnerProperties";
 import OwnerViolations from "./OwnerViolations";
 
-function Owner() {
+function Owner({ onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard");
 
   const renderPage = () => {
@@ -25,7 +25,7 @@ function Owner() {
   };
 
   return (
-    <OwnerLayout currentPage={currentPage} onNavigate={setCurrentPage}>
+    <OwnerLayout currentPage={currentPage} onNavigate={setCurrentPage} onLogout={onLogout}>
       {renderPage()}
     </OwnerLayout>
   );

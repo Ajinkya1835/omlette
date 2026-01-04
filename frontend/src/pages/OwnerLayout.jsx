@@ -2,13 +2,18 @@
 import { useState } from "react";
 import "./OwnerLayout.css";
 
-function OwnerLayout({ children, currentPage, onNavigate }) {
+function OwnerLayout({ children, currentPage, onNavigate, onLogout }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       localStorage.removeItem("token");
-      window.location.reload();
+      localStorage.removeItem("user");
+      if (onLogout) {
+        onLogout();
+      } else {
+        window.location.reload();
+      }
     }
   };
 

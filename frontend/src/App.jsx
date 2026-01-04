@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import apiRequest from "./api/api.js";
 import Login from "./pages/Login";
 import CitizenRegister from "./pages/CitizenRegister";
 import OwnerRegister from "./pages/OwnerRegister";
@@ -24,16 +25,27 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+    const initializeAuth = async () => {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+      
+      if (storedUser && token) {
+        try {
+          setUser(JSON.parse(storedUser));
+          // Optionally validate token with backend
+          await apiRequest("/api/auth/verify-token").catch(() => {
+            // If token is invalid, logout
+            handleLogout();
+          });
+        } catch (error) {
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const handleLogin = (userData) => {
@@ -56,7 +68,7 @@ function App() {
         {/* Auth Routes */}
         <Route
           path="/login"
-          element={user ? <Navigate to={user.role === "CITIZEN" ? "/citizen" : user.role === "PERMIT_HOLDER" ? "/owner" : "/officer"} replace /> : <Login />}
+          element={user ? <Navigate to={user.role === "CITIZEN" ? "/citizen" : user.role === "PERMIT_HOLDER" ? "/owner" : "/officer"} replace /> : <Login onLogin={handleLogin} />}
         />
         <Route path="/register/citizen" element={<CitizenRegister />} />
         <Route path="/register/owner" element={<OwnerRegister />} />
@@ -66,7 +78,7 @@ function App() {
           path="/citizen"
           element={
             <ProtectedRoute user={user} requiredRole="CITIZEN">
-              <Citizen />
+              <Citizen onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
@@ -74,7 +86,7 @@ function App() {
           path="/owner"
           element={
             <ProtectedRoute user={user} requiredRole="PERMIT_HOLDER">
-              <Owner />
+              <Owner onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />

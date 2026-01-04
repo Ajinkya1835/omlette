@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import apiRequest, { apiUpload } from "../api/api.js";
+import Layout from "../components/Layout.jsx";
 
-function Citizen() {
+function Citizen({ onLogout }) {
   /* ---------- RULE DATA ---------- */
   const [rules, setRules] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -125,23 +126,24 @@ function Citizen() {
 
   /* ---------- UI ---------- */
   return (
-    <div style={{ 
-      maxWidth: 1000, 
-      margin: "0 auto", 
-      padding: "30px 20px",
-      backgroundColor: "#f5f7fa"
-    }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: "white",
-        padding: "25px",
-        borderRadius: "12px",
-        marginBottom: "25px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+    <Layout onLogout={onLogout}>
+      <div style={{ 
+        maxWidth: 1000, 
+        margin: "0 auto", 
+        padding: "30px 20px",
+        backgroundColor: "#f5f7fa"
       }}>
-        <h2 style={{ 
-          margin: 0, 
-          marginBottom: "8px",
+        {/* Header */}
+        <div style={{
+          backgroundColor: "white",
+          padding: "25px",
+          borderRadius: "12px",
+          marginBottom: "25px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+        }}>
+          <h2 style={{ 
+            margin: 0, 
+            marginBottom: "8px",
           color: "#1a202c",
           fontSize: "28px",
           fontWeight: "600"
@@ -566,7 +568,8 @@ function Citizen() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }
 

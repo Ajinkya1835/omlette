@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import apiRequest from "../api/api.js";
 import "./AuthPages.css";
 
-export default function Login() {
+export default function Login({ onLogin }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,6 +29,11 @@ export default function Login() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Call the onLogin callback to update App state immediately
+      if (onLogin) {
+        onLogin(data.user);
+      }
 
       // Route based on role
       if (data.user.role === "CITIZEN") {
