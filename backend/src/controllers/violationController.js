@@ -1,5 +1,5 @@
+// backend/src/controllers/violationController.js
 import Violation from "../models/Violation.js";
-
 
 /* ======================================================
    CREATE VIOLATION (Citizen)
@@ -8,39 +8,34 @@ export const createViolation = async (req, res) => {
   try {
     const violationType = req.body.violationType;
     const description = req.body.description || "";
-    const latitude = req.body.latitude
-      ? Number(req.body.latitude)
-      : null;
-    const longitude = req.body.longitude
-      ? Number(req.body.longitude)
-      : null;
+    const latitude = req.body.latitude ? Number(req.body.latitude) : null;
+    const longitude = req.body.longitude ? Number(req.body.longitude) : null;
 
-    if (!violationType || latitude === null || longitude === null) {
-      return res.status(400).json({
-        message: "Missing required fields",
-      });
+    // ✅ Validation
+    if (!violationType) {
+      return res.status(400).json({ message: "Violation type is required" });
     }
 
-    // ✅ FIX: Use 'url' instead of 'path' to match schema
+    if (latitude === null || longitude === null || isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ message: "Valid location coordinates are required" });
+    }
+
+    // ✅ Process media files
     const mediaFiles = Array.isArray(req.files)
       ? req.files.map((file) => ({
-          url: file.path,  // Changed from 'path' to 'url'
-          type: file.mimetype.startsWith("image")
-            ? "IMAGE"
-            : "VIDEO",
+          url: file.path,
+          type: file.mimetype.startsWith("image") ? "IMAGE" : "VIDEO",
         }))
       : [];
 
     console.log("Creating violation with media:", JSON.stringify(mediaFiles));
 
+    // ✅ Create violation
     const violation = await Violation.create({
       reportedBy: req.user._id,
       violationType,
       description,
-      location: {
-        latitude,
-        longitude,
-      },
+      location: { latitude, longitude },
       media: mediaFiles,
       status: "AWAITING_OWNER",
     });
@@ -52,7 +47,7 @@ export const createViolation = async (req, res) => {
   } catch (error) {
     console.error("Error creating violation:", error);
     res.status(500).json({
-      message: error.message,
+      message: error.message || "Failed to create violation",
     });
   }
 };
@@ -70,21 +65,19 @@ export const getViolations = async (req, res) => {
 
     const rawViolations = await Violation.find(filter)
       .sort({ createdAt: -1 })
-      .lean(); // 🔑 IMPORTANT: convert to plain JS objects
+      .lean();
 
-    // 🛡️ HARD GUARANTEE: only valid objects go out
+    // ✅ Sanitize violations
     const safeViolations = Array.isArray(rawViolations)
       ? rawViolations.filter(
-          (v) =>
-            v &&
-            typeof v === "object" &&
-            typeof v.violationType === "string"
+          (v) => v && typeof v === "object" && typeof v.violationType === "string"
         )
       : [];
 
     res.json(safeViolations);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching violations:", error);
+    res.status(500).json({ message: error.message || "Failed to fetch violations" });
   }
 };
 
@@ -92,34 +85,12 @@ export const getViolations = async (req, res) => {
    OWNER ACTIONS (STUBS)
 ====================================================== */
 export const acceptViolation = async (req, res) => {
-  res.json({
-    message: "acceptViolation (to be implemented)",
-  });
+  res.json({ message: "acceptViolation (to be implemented)" });
 };
 
 export const objectViolation = async (req, res) => {
-  res.json({
-    message: "objectViolation (to be implemented)",
-  });
+  res.json({ message: "objectViolation (to be implemented)" });
 };
-
-/* ======================================================
-   OFFICER ACTIONS (STUBS)
-====================================================== */
-/*export const officerConfirm = async (req, res) => {
-  res.json({
-    message: "officerConfirm (to be implemented)",
-  });
-};
-
-export const officerOverride = async (req, res) => {
-  res.json({
-    message: "officerOverride (to be implemented)",
-  });
-};
-
-
-
 
 /* ======================================================
    OFFICER: GET OBJECTED VIOLATIONS
@@ -130,16 +101,15 @@ export const getOfficerViolations = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const violations = await Violation.find({
-      status: "OBJECTED",
-    })
+    const violations = await Violation.find({ status: "OBJECTED" })
       .sort({ createdAt: -1 })
       .populate("reportedBy", "name email")
       .lean();
 
     res.json(violations);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching officer violations:", error);
+    res.status(500).json({ message: error.message || "Failed to fetch violations" });
   }
 };
 
@@ -168,7 +138,8 @@ export const officerConfirm = async (req, res) => {
 
     res.json({ message: "Violation confirmed and closed", violation });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error confirming violation:", error);
+    res.status(500).json({ message: error.message || "Failed to confirm violation" });
   }
 };
 
@@ -183,6 +154,10 @@ export const officerOverride = async (req, res) => {
 
     const { reason } = req.body;
 
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ message: "Override reason is required" });
+    }
+
     const violation = await Violation.findById(req.params.id);
     if (!violation) {
       return res.status(404).json({ message: "Violation not found" });
@@ -194,14 +169,13 @@ export const officerOverride = async (req, res) => {
       decision: "OVERRIDDEN",
       requiresHuman: true,
     };
-
-    violation.overrideReason = reason || "No reason provided";
+    violation.overrideReason = reason;
 
     await violation.save();
 
     res.json({ message: "Violation overridden and closed", violation });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error overriding violation:", error);
+    res.status(500).json({ message: error.message || "Failed to override violation" });
   }
 };
-
