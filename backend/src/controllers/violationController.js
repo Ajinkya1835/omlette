@@ -8,6 +8,7 @@ export const createViolation = async (req, res) => {
   try {
     const violationType = req.body.violationType;
     const description = req.body.description || "";
+    const relatedProperty = req.body.relatedProperty || null;
     const latitude = req.body.latitude ? Number(req.body.latitude) : null;
     const longitude = req.body.longitude ? Number(req.body.longitude) : null;
 
@@ -35,6 +36,7 @@ export const createViolation = async (req, res) => {
       reportedBy: req.user._id,
       violationType,
       description,
+      relatedProperty: relatedProperty || undefined,
       location: { latitude, longitude },
       locationGeo: {
         type: "Point",

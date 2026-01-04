@@ -19,6 +19,13 @@ const violationSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Related property (optional)
+    relatedProperty: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
+      required: false,
+    },
+
     // Location of violation
     location: {
       latitude: {

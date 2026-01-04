@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import apiRequest, { apiUpload } from "../api/api.js";
 import Layout from "../components/Layout.jsx";
 import MapPicker from "../components/MapPicker.jsx";
+import PropertyMapSelector from "../components/PropertyMapSelector.jsx";
+import CitizenNearbyProperties from "./CitizenNearbyProperties.jsx";
 
 function Citizen({ onLogout }) {
   /* ---------- RULE DATA ---------- */
@@ -19,6 +21,10 @@ function Citizen({ onLogout }) {
   const [longitude, setLongitude] = useState(null);
   const [locationStatus, setLocationStatus] = useState("Detecting location…");
 
+  /* ---------- NEARBY PROPERTIES ---------- */
+  const [nearbyProperties, setNearbyProperties] = useState([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+
   /* ---------- VIOLATIONS ---------- */
   const [violations, setViolations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +32,7 @@ function Citizen({ onLogout }) {
   /* ---------- UI ---------- */
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("report");
 
   /* ---------- FETCH RULES ---------- */
   useEffect(() => {
@@ -57,6 +64,26 @@ function Citizen({ onLogout }) {
       }
     );
   }, []);
+
+  /* ---------- FETCH NEARBY PROPERTIES ---------- */
+  const fetchNearbyProperties = async () => {
+    if (!latitude || !longitude) return;
+    try {
+      const data = await apiRequest(
+        `/api/properties/nearby?lat=${latitude}&lng=${longitude}&radius=3000`
+      );
+      setNearbyProperties(data.properties || []);
+    } catch (err) {
+      console.error("Error fetching nearby properties:", err);
+      setNearbyProperties([]);
+    }
+  };
+
+  useEffect(() => {
+    if (latitude && longitude) {
+      fetchNearbyProperties();
+    }
+  }, [latitude, longitude]);
 
   /* ---------- FETCH MY VIOLATIONS ---------- */
   const fetchViolations = async () => {
@@ -98,6 +125,11 @@ function Citizen({ onLogout }) {
     formData.append("latitude", latitude);
     formData.append("longitude", longitude);
 
+    // Add related property if selected
+    if (selectedPropertyId) {
+      formData.append("relatedProperty", selectedPropertyId);
+    }
+
     files.forEach((f) => formData.append("media", f));
 
     try {
@@ -110,6 +142,7 @@ function Citizen({ onLogout }) {
       setFiles([]);
       setSelectedCategory("");
       setSelectedRuleCode("");
+      setSelectedPropertyId(null);
       
       // Clear file input
       const fileInput = document.querySelector('input[type="file"]');
@@ -160,6 +193,55 @@ function Citizen({ onLogout }) {
         </p>
       </div>
 
+      {/* Tab Navigation */}
+      <div style={{
+        backgroundColor: "white",
+        borderRadius: "12px",
+        marginBottom: "25px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        overflow: "hidden"
+      }}>
+        <div style={{
+          display: "flex",
+          borderBottom: "2px solid #e2e8f0"
+        }}>
+          <button
+            onClick={() => setActiveTab("report")}
+            style={{
+              flex: 1,
+              padding: "16px 24px",
+              backgroundColor: activeTab === "report" ? "#0056b3" : "transparent",
+              color: activeTab === "report" ? "white" : "#4a5568",
+              border: "none",
+              fontWeight: activeTab === "report" ? "600" : "500",
+              fontSize: "15px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              borderBottom: activeTab === "report" ? "3px solid #0056b3" : "none"
+            }}
+          >
+            📝 Report Violation
+          </button>
+          <button
+            onClick={() => setActiveTab("nearby")}
+            style={{
+              flex: 1,
+              padding: "16px 24px",
+              backgroundColor: activeTab === "nearby" ? "#0056b3" : "transparent",
+              color: activeTab === "nearby" ? "white" : "#4a5568",
+              border: "none",
+              fontWeight: activeTab === "nearby" ? "600" : "500",
+              fontSize: "15px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              borderBottom: activeTab === "nearby" ? "3px solid #0056b3" : "none"
+            }}
+          >
+            🏘️ Nearby Properties
+          </button>
+        </div>
+      </div>
+
       {/* Location Status */}
       <div
         style={{
@@ -208,8 +290,9 @@ function Citizen({ onLogout }) {
           {message}
         </div>
       )}
-
-      {/* Report Form */}
+      {/* Tab Content */}
+      {activeTab === "report" && (
+        <>      {/* Report Form */}
       <div
         style={{
           backgroundColor: "white",
@@ -415,6 +498,64 @@ function Citizen({ onLogout }) {
             )}
           </div>
 
+          {/* Nearby Properties Selector */}
+          {latitude && longitude && nearbyProperties.length > 0 && (
+            <div style={{ marginBottom: "28px" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "10px",
+                  fontWeight: "600",
+                  color: "#2d3748",
+                  fontSize: "15px"
+                }}
+              >
+                6. Link to Property (Optional):
+              </label>
+              <div style={{
+                padding: "12px",
+                backgroundColor: "#f0f9ff",
+                borderRadius: "8px",
+                marginBottom: "12px",
+                border: "1px solid #bfdbfe",
+                fontSize: "14px",
+                color: "#1e40af"
+              }}>
+                ℹ️ {nearbyProperties.length} registered {nearbyProperties.length === 1 ? 'property' : 'properties'} found nearby. 
+                Select one if the violation is related to a specific property.
+              </div>
+              <select
+                value={selectedPropertyId || ""}
+                onChange={(e) => setSelectedPropertyId(e.target.value || null)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  fontSize: "15px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  color: "#2d3748",
+                  cursor: "pointer",
+                  marginBottom: "12px"
+                }}
+              >
+                <option value="">-- None (General Area Violation) --</option>
+                {nearbyProperties.map((prop) => (
+                  <option key={prop._id} value={prop._id}>
+                    {prop.propertyName} - {prop.address} ({prop.distanceKm}km away)
+                  </option>
+                ))}
+              </select>
+              <PropertyMapSelector
+                latitude={latitude}
+                longitude={longitude}
+                properties={nearbyProperties}
+                onPropertySelect={(property) => setSelectedPropertyId(property._id)}
+                selectedPropertyId={selectedPropertyId}
+              />
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -605,6 +746,11 @@ function Citizen({ onLogout }) {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {/* Nearby Properties Tab */}
+      {activeTab === "nearby" && <CitizenNearbyProperties />}
       </div>
     </Layout>
   );
