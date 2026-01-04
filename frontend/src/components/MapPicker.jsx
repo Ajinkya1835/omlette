@@ -3,10 +3,11 @@ import { useEffect, useRef } from 'react';
 import { loadGoogleMaps } from '../utils/googleMapsLoader';
 import './MapPicker.css';
 
-function MapPicker({ latitude, longitude, onLocationChange }) {
+function MapPicker({ latitude, longitude, onLocationChange, properties = [] }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
+  const propertyMarkersRef = useRef([]);
 
   useEffect(() => {
     loadGoogleMaps((error) => {
@@ -21,6 +22,9 @@ function MapPicker({ latitude, longitude, onLocationChange }) {
       if (markerRef.current) {
         markerRef.current.setMap(null);
       }
+      propertyMarkersRef.current.forEach(marker => {
+        marker.setMap(null);
+      });
     };
   }, []);
 
@@ -39,6 +43,45 @@ function MapPicker({ latitude, longitude, onLocationChange }) {
       }
     }
   }, [latitude, longitude]);
+
+  // Display property markers
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear old markers
+    propertyMarkersRef.current.forEach(marker => {
+      marker.setMap(null);
+    });
+    propertyMarkersRef.current = [];
+
+    // Add new markers for each property
+    if (Array.isArray(properties) && properties.length > 0) {
+      properties.forEach((prop) => {
+        if (prop.latitude && prop.longitude) {
+          const marker = new window.google.maps.Marker({
+            position: { 
+              lat: parseFloat(prop.latitude), 
+              lng: parseFloat(prop.longitude) 
+            },
+            map: mapInstanceRef.current,
+            title: prop.propertyName || 'Property',
+            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+          });
+
+          // Add info window on marker click
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `<div style="padding: 8px; font-size: 13px;"><strong>${prop.propertyName || 'Property'}</strong><br/>${prop.propertyType || ''}</div>`,
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(mapInstanceRef.current, marker);
+          });
+
+          propertyMarkersRef.current.push(marker);
+        }
+      });
+    }
+  }, [properties]);
 
   const initializeMap = () => {
     if (!window.google || !mapRef.current) return;
@@ -77,36 +120,10 @@ function MapPicker({ latitude, longitude, onLocationChange }) {
     });
   };
 
-  const handleDetectLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(6);
-        const lng = position.coords.longitude.toFixed(6);
-        onLocationChange(lat, lng);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        alert('Unable to detect location. Please enable location permissions.');
-      }
-    );
-  };
-
   return (
     <div className="map-picker-container">
       <div className="map-picker-header">
-        <button 
-          type="button" 
-          className="detect-location-btn" 
-          onClick={handleDetectLocation}
-        >
-          📍 Detect My Location
-        </button>
-        <span className="map-picker-hint">Click map or drag marker to set location</span>
+        <span className="map-picker-hint">Click map or drag marker to set location. Blue markers show registered properties.</span>
       </div>
       <div ref={mapRef} className="map-picker-canvas"></div>
     </div>
