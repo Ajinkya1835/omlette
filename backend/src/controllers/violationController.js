@@ -31,6 +31,8 @@ export const createViolation = async (req, res) => {
         }))
       : [];
 
+    console.log("Creating violation with media:", JSON.stringify(mediaFiles));
+
     const violation = await Violation.create({
       reportedBy: req.user._id,
       violationType,
@@ -48,7 +50,7 @@ export const createViolation = async (req, res) => {
       violation,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error creating violation:", error);
     res.status(500).json({
       message: error.message,
     });

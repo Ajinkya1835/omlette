@@ -82,7 +82,7 @@ function App() {
           path="/officer"
           element={
             <ProtectedRoute user={user} requiredRole="OFFICER">
-              <Officer />
+              <Officer onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />

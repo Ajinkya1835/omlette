@@ -3,11 +3,13 @@ import apiRequest from "../api/api.js";
 import Layout from "../components/Layout.jsx";
 import "./Officer.css";
 
-export default function Officer() {
+export default function Officer({ onLogout }) {
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [stats, setStats] = useState({
     pending: { citizens: 0, owners: 0, properties: 0 },
     approved: { citizens: 0, owners: 0 },
+    total: { citizens: 0, owners: 0 },
+    violations: 0,
   });
   const [pendingCitizens, setPendingCitizens] = useState([]);
   const [pendingOwners, setPendingOwners] = useState([]);
@@ -373,7 +375,7 @@ export default function Officer() {
   );
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="officer-container">
         <div className="officer-nav">
           <button

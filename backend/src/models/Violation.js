@@ -34,41 +34,45 @@ const violationSchema = new mongoose.Schema(
     // Evidence - Keep as 'url' (file.path gets stored here)
     media: [
       {
-        url: String,   // Stores the file path from multer
-        type: String,  // "IMAGE" or "VIDEO"
+        url: {
+          type: String,
+        },
+        type: {
+          type: String,
+          enum: ["IMAGE", "VIDEO"],
+        },
       },
     ],
 
     // 🔐 AUTOMATED DECISION SNAPSHOT (IMMUTABLE)
-    // backend/src/models/Violation.js - UPDATE decision schema
-   decision: {
-  decision: {
-    type: String,
-  },
-  amount: {
-    type: Number,
-    default: 0,
-  },
-  ruleApplied: {
-    type: String,
-  },
-  ruleSnapshot: {
-    title: String,
-    act: String,
-    section: String,
-    authority: String,
-    severity: String,
-  },
-  aiConfidence: {
-    type: Number,
-  },
-  requiresHuman: {
-    type: Boolean,
-    default: false,
-  },
-  overrideReason: {
-    type: String,
-  },
+    decision: {
+      decision: {
+        type: String,
+      },
+      amount: {
+        type: Number,
+        default: 0,
+      },
+      ruleApplied: {
+        type: String,
+      },
+      ruleSnapshot: {
+        title: String,
+        act: String,
+        section: String,
+        authority: String,
+        severity: String,
+      },
+      aiConfidence: {
+        type: Number,
+      },
+      requiresHuman: {
+        type: Boolean,
+        default: false,
+      },
+      overrideReason: {
+        type: String,
+      },
     },
 
     // 🔁 STATUS STATE MACHINE
