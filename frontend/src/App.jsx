@@ -7,6 +7,7 @@ import OwnerRegister from "./pages/OwnerRegister";
 import Citizen from "./pages/Citizen";
 import Owner from "./pages/Owner";
 import Officer from "./pages/Officer";
+import AllPropertiesMap from "./pages/AllPropertiesMap.jsx";
 
 function ProtectedRoute({ children, user, requiredRole }) {
   if (!user) {
@@ -95,6 +96,14 @@ function App() {
           element={
             <ProtectedRoute user={user} requiredRole="OFFICER">
               <Officer onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties/all"
+          element={
+            <ProtectedRoute user={user}>
+              <AllPropertiesMap />
             </ProtectedRoute>
           }
         />

@@ -20,6 +20,25 @@ export const getAllProperties = async (req, res) => {
   }
 };
 
+// Get all active properties (minimal data for map view)
+export const getAllPropertiesForMap = async (req, res) => {
+  try {
+    const properties = await Property.find({ status: "ACTIVE" })
+      .select("_id propertyName propertyType address latitude longitude")
+      .sort({ propertyName: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      count: properties.length,
+      properties,
+    });
+  } catch (error) {
+    console.error("Error fetching properties for map:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get nearby properties within radius
 export const getNearbyProperties = async (req, res) => {
   try {
