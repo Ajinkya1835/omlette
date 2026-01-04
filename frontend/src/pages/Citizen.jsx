@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import apiRequest, { apiUpload } from "../api/api.js";
 import Layout from "../components/Layout.jsx";
+import MapPicker from "../components/MapPicker.jsx";
 
 function Citizen({ onLogout }) {
   /* ---------- RULE DATA ---------- */
@@ -375,6 +376,42 @@ function Citizen({ onLogout }) {
               }}>
                 📎 {files.length} file(s) selected
               </small>
+            )}
+          </div>
+
+          {/* Location Map Picker */}
+          <div style={{ marginBottom: "28px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
+              }}
+            >
+              5. Set Violation Location:
+            </label>
+            <MapPicker
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={(lat, lng) => {
+                setLatitude(lat);
+                setLongitude(lng);
+                setLocationStatus("Location updated ✓");
+              }}
+            />
+            {latitude && longitude && (
+              <div style={{
+                marginTop: "8px",
+                padding: "8px 12px",
+                backgroundColor: "#f7fafc",
+                borderRadius: "6px",
+                fontSize: "14px",
+                color: "#4a5568"
+              }}>
+                <strong>Current Location:</strong> {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
+              </div>
             )}
           </div>
 

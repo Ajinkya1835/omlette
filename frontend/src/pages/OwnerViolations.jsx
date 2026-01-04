@@ -1,6 +1,7 @@
 // frontend/src/pages/OwnerViolations.jsx
 import { useEffect, useState } from "react";
 import apiRequest from "../api/api.js";
+import MapView from "../components/MapView.jsx";
 import "./OwnerViolations.css";
 
 function OwnerViolations({ onNavigate }) {
@@ -164,14 +165,11 @@ function OwnerViolations({ onNavigate }) {
                 {/* Location */}
                 <div className="info-section">
                   <h4>Location</h4>
-                  <div className="info-details">
-                    <div className="info-row">
-                      <span className="info-label">Coordinates:</span>
-                      <span className="info-value">
-                        {violation.location?.latitude?.toFixed(6)}, {violation.location?.longitude?.toFixed(6)}
-                      </span>
-                    </div>
-                  </div>
+                  <MapView
+                    latitude={violation.location?.latitude}
+                    longitude={violation.location?.longitude}
+                    title="Violation Location"
+                  />
                 </div>
 
                 {/* Media Evidence */}

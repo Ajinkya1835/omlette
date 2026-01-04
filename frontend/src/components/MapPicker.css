@@ -1,0 +1,51 @@
+/* frontend/src/components/MapPicker.css */
+.map-picker-container {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.map-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.detect-location-btn {
+  background: #0056b3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.detect-location-btn:hover {
+  background: #004494;
+}
+
+.map-picker-hint {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.map-picker-canvas {
+  width: 100%;
+  height: 400px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .map-picker-canvas {
+    height: 300px;
+  }
+  
+  .map-picker-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

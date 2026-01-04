@@ -1,6 +1,7 @@
 // frontend/src/pages/OwnerProperties.jsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import apiRequest from "../api/api.js";
+import MapPicker from "../components/MapPicker.jsx";
 import "./OwnerProperties.css";
 
 function OwnerProperties({ onNavigate }) {
@@ -16,86 +17,16 @@ function OwnerProperties({ onNavigate }) {
     address: "",
     wardNumber: "",
     zone: "",
-    latitude: "",
-    longitude: "",
+    latitude: "19.0760",
+    longitude: "72.8777",
     permitNumber: "",
     permitValidFrom: "",
     permitValidTo: "",
   });
 
-  const mapRef = useRef(null);
-  const markerRef = useRef(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-
   useEffect(() => {
     fetchProperties();
-    loadGoogleMaps();
   }, []);
-
-  useEffect(() => {
-    if (mapLoaded && (showAddForm || editingProperty) && formData.latitude && formData.longitude) {
-      initializeMap();
-    }
-  }, [mapLoaded, showAddForm, editingProperty, formData.latitude, formData.longitude]);
-
-  const loadGoogleMaps = () => {
-    if (window.google && window.google.maps) {
-      setMapLoaded(true);
-      return;
-    }
-
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setMapLoaded(true);
-    script.onerror = () => console.error('Failed to load Google Maps');
-    document.head.appendChild(script);
-  };
-
-  const initializeMap = () => {
-    if (!window.google || !mapRef.current) return;
-
-    const lat = parseFloat(formData.latitude) || 19.1965;
-    const lng = parseFloat(formData.longitude) || 72.9721;
-
-    const map = new window.google.maps.Map(mapRef.current, {
-      center: { lat, lng },
-      zoom: 15,
-    });
-
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
-
-    markerRef.current = new window.google.maps.Marker({
-      position: { lat, lng },
-      map: map,
-      draggable: !editingProperty,
-    });
-
-    if (!editingProperty) {
-      markerRef.current.addListener('dragend', (event) => {
-        setFormData(prev => ({
-          ...prev,
-          latitude: event.latLng.lat().toFixed(6),
-          longitude: event.latLng.lng().toFixed(6)
-        }));
-      });
-
-      map.addListener('click', (event) => {
-        const lat = event.latLng.lat();
-        const lng = event.latLng.lng();
-        markerRef.current.setPosition({ lat, lng });
-        setFormData(prev => ({
-          ...prev,
-          latitude: lat.toFixed(6),
-          longitude: lng.toFixed(6)
-        }));
-      });
-    }
-  };
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -163,18 +94,14 @@ function OwnerProperties({ onNavigate }) {
       address: "",
       wardNumber: "",
       zone: "",
-      latitude: "",
-      longitude: "",
+      latitude: "19.0760",
+      longitude: "72.8777",
       permitNumber: "",
       permitValidFrom: "",
       permitValidTo: "",
     });
     setShowAddForm(false);
     setEditingProperty(null);
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-      markerRef.current = null;
-    }
   };
 
   const getStatusBadgeClass = (status) => {
@@ -294,6 +221,20 @@ function OwnerProperties({ onNavigate }) {
               <div ref={mapRef} className="map-container" style={{ width: '100%', height: '400px', borderRadius: '4px', border: '1px solid #cbd5e1' }}></div>
             </div>
 
+            {/* Map Picker Component */}
+            {!editingProperty && (
+              <div className="form-group">
+                <label>Property Location *</label>
+                <MapPicker
+                  latitude={formData.latitude}
+                  longitude={formData.longitude}
+                  onLocationChange={(lat, lng) => {
+                    setFormData({ ...formData, latitude: lat, longitude: lng });
+                  }}
+                />
+              </div>
+            )}
+
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="latitude">Latitude *</label>
@@ -304,7 +245,7 @@ function OwnerProperties({ onNavigate }) {
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
                   required
-                  readOnly={editingProperty !== null}
+                  readOnly
                 />
               </div>
 
@@ -317,7 +258,7 @@ function OwnerProperties({ onNavigate }) {
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                   required
-                  readOnly={editingProperty !== null}
+                  readOnly
                 />
               </div>
             </div>
