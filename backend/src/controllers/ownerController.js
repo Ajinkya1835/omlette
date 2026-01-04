@@ -105,6 +105,10 @@ export const addProperty = async (req, res) => {
       zone,
       latitude,
       longitude,
+      locationGeo: {
+        type: "Point",
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      },
       permitNumber,
       permitValidFrom,
       permitValidTo,

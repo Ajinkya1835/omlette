@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import apiRequest from "../api/api.js";
 import Layout from "../components/Layout.jsx";
+import MapSearchPanel from "../components/MapSearchPanel.jsx";
 import "./Officer.css";
 
 export default function Officer({ onLogout }) {
@@ -402,6 +403,12 @@ export default function Officer({ onLogout }) {
           >
             Properties ({pendingProperties.length})
           </button>
+          <button
+            className={`nav-btn ${currentTab === "map" ? "active" : ""}`}
+            onClick={() => setCurrentTab("map")}
+          >
+            🗺️ Map Search
+          </button>
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
@@ -414,6 +421,7 @@ export default function Officer({ onLogout }) {
             {currentTab === "citizens" && renderCitizens()}
             {currentTab === "owners" && renderOwners()}
             {currentTab === "properties" && renderProperties()}
+            {currentTab === "map" && <MapSearchPanel userRole="OFFICER" />}
           </>
         )}
 

@@ -21,6 +21,7 @@ function OwnerLayout({ children, currentPage, onNavigate, onLogout }) {
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "properties", label: "My Properties", icon: "🏢" },
     { id: "violations", label: "My Violations", icon: "⚠️" },
+    { id: "map", label: "Map Search", icon: "🗺️" },
     { id: "profile", label: "Profile", icon: "👤" },
   ];
 

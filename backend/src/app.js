@@ -6,6 +6,7 @@ import violationRoutes from "./routes/violationRoutes.js";
 import ruleRoutes from "./routes/ruleRoutes.js";
 import officerRoutes from "./routes/officerRoutes.js";
 import ownerRoutes from "./routes/ownerRoutes.js";
+import mapSearchRoutes from "./routes/mapSearchRoutes.js";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/api/rules", ruleRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/officer", officerRoutes);
 app.use("/api/owner", ownerRoutes);
+app.use("/api/map", mapSearchRoutes);
 
 
 app.get("/health", (req, res) => {

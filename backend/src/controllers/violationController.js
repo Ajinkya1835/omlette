@@ -36,6 +36,10 @@ export const createViolation = async (req, res) => {
       violationType,
       description,
       location: { latitude, longitude },
+      locationGeo: {
+        type: "Point",
+        coordinates: [longitude, latitude], // [lng, lat] order
+      },
       media: mediaFiles,
       status: "AWAITING_OWNER",
     });

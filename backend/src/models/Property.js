@@ -36,6 +36,20 @@ const propertySchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+
+    // GeoJSON for geospatial queries (backward compatible)
+    locationGeo: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: "2dsphere",
+      },
+    },
+
     permitNumber: {
       type: String,
       required: true,

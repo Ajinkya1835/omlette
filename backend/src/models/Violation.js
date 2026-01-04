@@ -31,6 +31,19 @@ const violationSchema = new mongoose.Schema(
       },
     },
 
+    // GeoJSON for geospatial queries (backward compatible)
+    locationGeo: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: "2dsphere",
+      },
+    },
+
     // Evidence - Keep as 'url' (file.path gets stored here)
     media: [
       {
