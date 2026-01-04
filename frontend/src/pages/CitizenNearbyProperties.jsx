@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import apiRequest from "../api/api.js";
 import { loadGoogleMaps } from "../utils/googleMapsLoader";
+import { calculateDistance, formatDistance } from "../utils/distanceCalculator.js";
 import "./CitizenNearbyProperties.css";
 
 function CitizenNearbyProperties() {
@@ -9,7 +10,6 @@ function CitizenNearbyProperties() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userLocation, setUserLocation] = useState(null);
-  const [radius, setRadius] = useState(3000); // 3km default
   const [selectedProperty, setSelectedProperty] = useState(null);
 
   const mapRef = useRef(null);
@@ -22,9 +22,9 @@ function CitizenNearbyProperties() {
 
   useEffect(() => {
     if (userLocation) {
-      fetchNearbyProperties();
+      fetchAllProperties();
     }
-  }, [userLocation, radius]);
+  }, [userLocation]);
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
@@ -48,17 +48,33 @@ function CitizenNearbyProperties() {
     );
   };
 
-  const fetchNearbyProperties = async () => {
+  const fetchAllProperties = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const data = await apiRequest(
-        `/api/properties/nearby?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=${radius}`
-      );
+      const data = await apiRequest("/api/properties/all");
+      
+      // Calculate distance for each property
+      const propertiesWithDistance = (data.properties || []).map((prop) => {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          prop.latitude,
+          prop.longitude
+        );
+        return {
+          ...prop,
+          distance: distance.meters,
+          distanceKm: distance.kilometers,
+        };
+      });
 
-      setProperties(data.properties || []);
-      initializeMap(data.properties || []);
+      // Sort by distance (nearest first)
+      propertiesWithDistance.sort((a, b) => a.distance - b.distance);
+      
+      setProperties(propertiesWithDistance);
+      initializeMap(propertiesWithDistance);
     } catch (err) {
       setError(err.message || "Failed to fetch properties");
     } finally {
@@ -124,19 +140,6 @@ function CitizenNearbyProperties() {
         markersRef.current.push(marker);
       }
     });
-
-    // Draw radius circle
-    const circle = new window.google.maps.Circle({
-      strokeColor: '#0056b3',
-      strokeOpacity: 0.4,
-      strokeWeight: 2,
-      fillColor: '#0056b3',
-      fillOpacity: 0.1,
-      map: mapInstanceRef.current,
-      center: userLocation,
-      radius: radius,
-    });
-    markersRef.current.push(circle);
   };
 
   const handlePropertySelect = (property) => {
@@ -157,22 +160,12 @@ function CitizenNearbyProperties() {
   return (
     <div className="nearby-properties-container">
       <div className="page-header-nearby">
-        <h2>🏢 Nearby Properties</h2>
-        <p>View properties registered near your location</p>
+        <h2>🏢 All Properties</h2>
+        <p>View all registered properties with distance from your location</p>
       </div>
 
       {/* Controls */}
       <div className="controls-bar">
-        <div className="control-group">
-          <label>Search Radius:</label>
-          <select value={radius} onChange={(e) => setRadius(parseInt(e.target.value))}>
-            <option value="1000">1 km</option>
-            <option value="2000">2 km</option>
-            <option value="3000">3 km</option>
-            <option value="5000">5 km</option>
-            <option value="10000">10 km</option>
-          </select>
-        </div>
         <button className="btn-refresh" onClick={detectLocation}>
           🔄 Refresh Location
         </button>
@@ -185,14 +178,14 @@ function CitizenNearbyProperties() {
       )}
 
       {loading ? (
-        <div className="loading-state-nearby">Loading nearby properties...</div>
+        <div className="loading-state-nearby">Loading properties...</div>
       ) : (
         <>
           {/* Map */}
           <div className="map-section-nearby">
             <div ref={mapRef} className="map-canvas-nearby"></div>
             <div className="map-info">
-              <strong>Found {properties.length} properties</strong> within {radius / 1000} km
+              <strong>Found {properties.length} active properties</strong>
             </div>
           </div>
 
@@ -202,10 +195,7 @@ function CitizenNearbyProperties() {
 
             {properties.length === 0 ? (
               <div className="no-properties">
-                <p>No properties found within {radius / 1000} km of your location.</p>
-                <button className="btn-increase-radius" onClick={() => setRadius(radius + 2000)}>
-                  Increase Search Radius
-                </button>
+                <p>No active properties found in the system.</p>
               </div>
             ) : (
               <div className="properties-table-wrapper">
@@ -271,18 +261,18 @@ function CitizenNearbyProperties() {
                   <span className="detail-label">Address:</span>
                   <span className="detail-value">{selectedProperty.address}</span>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Ward:</span>
-                  <span className="detail-value">{selectedProperty.wardNumber}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Zone:</span>
-                  <span className="detail-value">{selectedProperty.zone}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Permit:</span>
-                  <span className="detail-value">{selectedProperty.permitNumber}</span>
-                </div>
+                {selectedProperty.wardNumber && (
+                  <div className="detail-row">
+                    <span className="detail-label">Ward:</span>
+                    <span className="detail-value">{selectedProperty.wardNumber}</span>
+                  </div>
+                )}
+                {selectedProperty.zone && (
+                  <div className="detail-row">
+                    <span className="detail-label">Zone:</span>
+                    <span className="detail-value">{selectedProperty.zone}</span>
+                  </div>
+                )}
                 <div className="detail-row">
                   <span className="detail-label">Distance:</span>
                   <span className="detail-value">{selectedProperty.distanceKm} km</span>

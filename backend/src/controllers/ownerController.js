@@ -180,10 +180,24 @@ export const getOwnerViolations = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    // Get all properties owned by this user
+    const ownedProperties = await Property.find({ owner: req.user.userId }).select("_id");
+    const propertyIds = ownedProperties.map((p) => p._id);
+
+    // Find violations linked to owner's properties OR unlinked violations (backward compat)
     const violations = await Violation.find({
+      $or: [
+        { relatedProperty: { $in: propertyIds } },
+        { relatedProperty: { $exists: false } }, // Unlinked violations
+        { relatedProperty: null }, // Explicitly null
+      ],
       status: "AWAITING_OWNER",
     })
       .populate("reportedBy", "name email")
+      .populate({
+        path: "relatedProperty",
+        select: "propertyName propertyType address",
+      })
       .sort({ createdAt: -1 })
       .lean();
 

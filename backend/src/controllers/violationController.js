@@ -1,5 +1,6 @@
 // backend/src/controllers/violationController.js
 import Violation from "../models/Violation.js";
+import Property from "../models/Property.js";
 
 /* ======================================================
    CREATE VIOLATION (Citizen)
@@ -19,6 +20,17 @@ export const createViolation = async (req, res) => {
 
     if (latitude === null || longitude === null || isNaN(latitude) || isNaN(longitude)) {
       return res.status(400).json({ message: "Valid location coordinates are required" });
+    }
+
+    // ✅ Validate property if provided
+    if (relatedProperty) {
+      const property = await Property.findById(relatedProperty);
+      if (!property) {
+        return res.status(400).json({ message: "Property not found" });
+      }
+      if (property.status !== "ACTIVE") {
+        return res.status(400).json({ message: "Property is not active" });
+      }
     }
 
     // ✅ Process media files
@@ -70,6 +82,14 @@ export const getViolations = async (req, res) => {
     }
 
     const rawViolations = await Violation.find(filter)
+      .populate({
+        path: "relatedProperty",
+        select: "propertyName propertyType address latitude longitude owner",
+        populate: {
+          path: "owner",
+          select: "name email phone",
+        },
+      })
       .sort({ createdAt: -1 })
       .lean();
 

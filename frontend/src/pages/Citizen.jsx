@@ -24,6 +24,7 @@ function Citizen({ onLogout }) {
   /* ---------- NEARBY PROPERTIES ---------- */
   const [nearbyProperties, setNearbyProperties] = useState([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [allProperties, setAllProperties] = useState([]);
 
   /* ---------- VIOLATIONS ---------- */
   const [violations, setViolations] = useState([]);
@@ -48,6 +49,20 @@ function Citizen({ onLogout }) {
       }
     }
     fetchRules();
+  }, []);
+
+  /* ---------- FETCH ALL PROPERTIES ---------- */
+  useEffect(() => {
+    async function fetchProperties() {
+      try {
+        const data = await apiRequest("/api/properties/all");
+        setAllProperties(Array.isArray(data.properties) ? data.properties : []);
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        setAllProperties([]);
+      }
+    }
+    fetchProperties();
   }, []);
 
   /* ---------- LOCATION ---------- */
@@ -313,6 +328,43 @@ function Citizen({ onLogout }) {
         </h3>
         
         <form onSubmit={handleSubmit}>
+          {/* Related Property Select (Optional) */}
+          <div style={{ marginBottom: "24px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "10px",
+                fontWeight: "600",
+                color: "#2d3748",
+                fontSize: "15px"
+              }}
+            >
+              0. Related Property (Optional):
+            </label>
+            <select
+              value={selectedPropertyId || ""}
+              onChange={(e) => setSelectedPropertyId(e.target.value || null)}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                fontSize: "15px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                backgroundColor: "white",
+                color: "#2d3748",
+                cursor: "pointer",
+                transition: "border-color 0.2s"
+              }}
+            >
+              <option value="">-- Select property (optional) --</option>
+              {allProperties.map((prop) => (
+                <option key={prop._id} value={prop._id}>
+                  {prop.propertyName} — {prop.propertyType}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Category Select */}
           <div style={{ marginBottom: "24px" }}>
             <label
@@ -673,6 +725,16 @@ function Citizen({ onLogout }) {
                     fontWeight: "600",
                     fontSize: "14px"
                   }}>
+                    🏢 Property
+                  </th>
+                  <th style={{ 
+                    padding: "16px 20px", 
+                    textAlign: "left", 
+                    borderBottom: "2px solid #e2e8f0",
+                    color: "#2d3748",
+                    fontWeight: "600",
+                    fontSize: "14px"
+                  }}>
                     📊 Status
                   </th>
                 </tr>
@@ -710,6 +772,24 @@ function Citizen({ onLogout }) {
                       fontSize: "14px"
                     }}>
                       {v?.violationType ?? "UNKNOWN"}
+                    </td>
+                    <td style={{ 
+                      padding: "16px 20px",
+                      color: "#4a5568",
+                      fontSize: "13px"
+                    }}>
+                      {v?.relatedProperty?.propertyName ? (
+                        <div>
+                          <div style={{ fontWeight: "500", color: "#2d3748" }}>
+                            {v.relatedProperty.propertyName}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#718096" }}>
+                            {v.relatedProperty.propertyType}
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ color: "#a0aec0", fontStyle: "italic" }}>—</span>
+                      )}
                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       <span

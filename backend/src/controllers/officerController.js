@@ -8,6 +8,14 @@ export const getObjectedViolations = async (req, res) => {
   try {
     const violations = await Violation.find({ status: "OBJECTED" })
       .populate("reportedBy", "name email")
+      .populate({
+        path: "relatedProperty",
+        select: "propertyName propertyType address",
+        populate: {
+          path: "owner",
+          select: "name email phone",
+        },
+      })
       .sort({ createdAt: -1 })
       .lean();
 

@@ -162,6 +162,27 @@ function OwnerViolations({ onNavigate }) {
                   </div>
                 )}
 
+                {/* Related Property */}
+                {violation.relatedProperty && (
+                  <div className="info-section">
+                    <h4>Related Property</h4>
+                    <div className="property-info">
+                      <div className="info-row">
+                        <span className="info-label">Name:</span>
+                        <span className="info-value">{violation.relatedProperty.propertyName}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">Type:</span>
+                        <span className="info-value">{violation.relatedProperty.propertyType}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">Address:</span>
+                        <span className="info-value">{violation.relatedProperty.address}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Location */}
                 <div className="info-section">
                   <h4>Location</h4>
