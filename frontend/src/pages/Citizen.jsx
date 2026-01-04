@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiRequest, apiUpload } from "../api/api";
+import apiRequest, { apiUpload } from "../api/api.js";
 
 function Citizen() {
   /* ---------- RULE DATA ---------- */

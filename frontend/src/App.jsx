@@ -1,30 +1,97 @@
-import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Login from "./pages/Login";
+import CitizenRegister from "./pages/CitizenRegister";
+import OwnerRegister from "./pages/OwnerRegister";
 import Citizen from "./pages/Citizen";
 import Owner from "./pages/Owner";
 import Officer from "./pages/Officer";
 
+function ProtectedRoute({ children, user, requiredRole }) {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  };
+
+  if (loading) {
+    return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#f5f5f5", fontSize: "18px" }}>Loading...</div>;
   }
 
-  if (user.role === "CITIZEN") {
-    return <Citizen />;
-  }
+  return (
+    <div style={{ width: "100%", minHeight: "100vh" }}>
+      <Routes>
+        {/* Auth Routes */}
+        <Route
+          path="/login"
+          element={user ? <Navigate to={user.role === "CITIZEN" ? "/citizen" : user.role === "PERMIT_HOLDER" ? "/owner" : "/officer"} replace /> : <Login />}
+        />
+        <Route path="/register/citizen" element={<CitizenRegister />} />
+        <Route path="/register/owner" element={<OwnerRegister />} />
 
-  // frontend/src/App.jsx - UPDATE THE OWNER CONDITION
-  if (user.role === "PERMIT_HOLDER") {
-   return <Owner />;
-  }
+        {/* Protected Routes */}
+        <Route
+          path="/citizen"
+          element={
+            <ProtectedRoute user={user} requiredRole="CITIZEN">
+              <Citizen />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner"
+          element={
+            <ProtectedRoute user={user} requiredRole="PERMIT_HOLDER">
+              <Owner />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/officer"
+          element={
+            <ProtectedRoute user={user} requiredRole="OFFICER">
+              <Officer />
+            </ProtectedRoute>
+          }
+        />
 
-  if (user.role === "OFFICER") {
-    return <Officer />;
-  }
-
-  return <p>Unknown role</p>;
+        {/* Default Route */}
+        <Route path="/" element={<Navigate to={user ? (user.role === "CITIZEN" ? "/citizen" : user.role === "PERMIT_HOLDER" ? "/owner" : "/officer") : "/login"} replace />} />
+      </Routes>
+    </div>
+  );
 }
 
 export default App;

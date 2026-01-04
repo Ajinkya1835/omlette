@@ -1,6 +1,6 @@
 // frontend/src/pages/OwnerViolations.jsx
 import { useEffect, useState } from "react";
-import { apiRequest } from "../api/api";
+import apiRequest from "../api/api.js";
 import "./OwnerViolations.css";
 
 function OwnerViolations({ onNavigate }) {

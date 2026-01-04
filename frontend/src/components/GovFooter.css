@@ -1,0 +1,51 @@
+/* frontend/src/components/GovFooter.css */
+.gov-footer {
+  background-color: #0b3c5d;
+  color: white;
+  padding: 24px;
+  margin-top: auto;
+}
+
+.footer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gov-footer p {
+  margin: 8px 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.footer-links {
+  font-size: 13px;
+}
+
+.footer-links a {
+  color: white;
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.footer-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.footer-links span {
+  margin: 0 8px;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .gov-footer {
+    padding: 16px;
+  }
+
+  .gov-footer p,
+  .footer-links {
+    font-size: 12px;
+  }
+}

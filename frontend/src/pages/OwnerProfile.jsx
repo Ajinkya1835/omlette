@@ -1,6 +1,6 @@
 // frontend/src/pages/OwnerProfile.jsx
 import { useEffect, useState } from "react";
-import { apiRequest } from "../api/api";
+import apiRequest from "../api/api.js";
 import "./OwnerProfile.css";
 
 function OwnerProfile({ onNavigate }) {

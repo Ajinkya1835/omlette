@@ -45,3 +45,5 @@ export async function apiUpload(path, formData) {
 
   return data;
 }
+
+export default apiRequest;

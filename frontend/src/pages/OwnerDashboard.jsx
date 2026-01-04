@@ -1,6 +1,6 @@
 // frontend/src/pages/OwnerDashboard.jsx
 import { useEffect, useState } from "react";
-import { apiRequest } from "../api/api";
+import apiRequest from "../api/api.js";
 import "./OwnerDashboard.css";
 
 function OwnerDashboard({ onNavigate }) {

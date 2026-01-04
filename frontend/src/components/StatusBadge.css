@@ -1,0 +1,83 @@
+/* frontend/src/components/StatusBadge.css */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Violation Status */
+.status-reported {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-auto-decided {
+  background-color: #dbeafe;
+  color: #0c4a6e;
+}
+
+.status-awaiting {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-paid {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-objected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-review {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.status-closed {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* Property Status */
+.status-active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-suspended {
+  background-color: #fed7aa;
+  color: #7c2d12;
+}
+
+.status-expired {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* Approval Status */
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-approved {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-default {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}

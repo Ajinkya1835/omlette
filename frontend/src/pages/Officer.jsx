@@ -1,205 +1,422 @@
-// frontend/src/pages/Officer.jsx
-import { useEffect, useState } from "react";
-import { apiRequest } from "../api/api";
+import { useState, useEffect } from "react";
+import apiRequest from "../api/api.js";
+import Layout from "../components/Layout.jsx";
 import "./Officer.css";
 
-function Officer() {
-  const [violations, setViolations] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function Officer() {
+  const [currentTab, setCurrentTab] = useState("dashboard");
+  const [stats, setStats] = useState({
+    pending: { citizens: 0, owners: 0, properties: 0 },
+    approved: { citizens: 0, owners: 0 },
+  });
+  const [pendingCitizens, setPendingCitizens] = useState([]);
+  const [pendingOwners, setPendingOwners] = useState([]);
+  const [pendingProperties, setPendingProperties] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [overrideModal, setOverrideModal] = useState(null);
-  const [overrideReason, setOverrideReason] = useState("");
+  const [selectedForAction, setSelectedForAction] = useState(null);
+  const [actionType, setActionType] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
-  const fetchViolations = async () => {
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
     setLoading(true);
     setError("");
     try {
-      const data = await apiRequest("/api/officer/violations");
-      setViolations(Array.isArray(data) ? data : []);
+      const [statsData, citizensData, ownersData, propsData] = await Promise.all([
+        apiRequest("/api/officer/dashboard-stats"),
+        apiRequest("/api/officer/pending-citizens"),
+        apiRequest("/api/officer/pending-owners"),
+        apiRequest("/api/officer/pending-properties"),
+      ]);
+
+      setStats(statsData);
+      setPendingCitizens(citizensData.citizens || []);
+      setPendingOwners(ownersData.owners || []);
+      setPendingProperties(propsData.properties || []);
     } catch (err) {
-      setError(err.message || "Failed to fetch violations");
-      setViolations([]);
+      setError("Failed to load dashboard data");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchViolations();
-  }, []);
-
-  const handleConfirm = async (id) => {
-    if (!window.confirm("Confirm this violation as valid?")) return;
-
+  const handleApproveCitizen = async (userId) => {
     try {
-      await apiRequest(`/api/officer/violations/${id}/confirm`, {
+      const response = await apiRequest(`/api/officer/approve-citizen/${userId}`, {
         method: "POST",
       });
-      setMessage("Violation confirmed successfully");
-      fetchViolations();
-      setTimeout(() => setMessage(""), 3000);
+
+      setPendingCitizens((prev) => prev.filter((c) => c._id !== userId));
+      setStats((prev) => ({
+        ...prev,
+        pending: { ...prev.pending, citizens: prev.pending.citizens - 1 },
+        approved: { ...prev.approved, citizens: prev.approved.citizens + 1 },
+      }));
+      setSelectedForAction(null);
     } catch (err) {
-      setError(err.message || "Failed to confirm violation");
+      setError("Failed to approve citizen");
     }
   };
 
-  const handleOverride = async (id) => {
-    if (!overrideReason.trim()) {
-      alert("Please provide a reason for override");
+  const handleApproveOwner = async (userId) => {
+    try {
+      const response = await apiRequest(`/api/officer/approve-owner/${userId}`, {
+        method: "POST",
+      });
+
+      setPendingOwners((prev) => prev.filter((o) => o._id !== userId));
+      setStats((prev) => ({
+        ...prev,
+        pending: { ...prev.pending, owners: prev.pending.owners - 1 },
+        approved: { ...prev.approved, owners: prev.approved.owners + 1 },
+      }));
+      setSelectedForAction(null);
+    } catch (err) {
+      setError("Failed to approve owner");
+    }
+  };
+
+  const handleRejectUser = async (userId) => {
+    if (!rejectionReason.trim()) {
+      setError("Please provide a rejection reason");
       return;
     }
 
     try {
-      await apiRequest(`/api/officer/violations/${id}/override`, {
+      const response = await apiRequest(`/api/officer/reject-user/${userId}`, {
         method: "POST",
-        body: JSON.stringify({ reason: overrideReason }),
+        body: JSON.stringify({ reason: rejectionReason }),
       });
-      setMessage("Violation overridden successfully");
-      setOverrideModal(null);
-      setOverrideReason("");
-      fetchViolations();
-      setTimeout(() => setMessage(""), 3000);
+
+      setPendingCitizens((prev) => prev.filter((c) => c._id !== userId));
+      setPendingOwners((prev) => prev.filter((o) => o._id !== userId));
+      setSelectedForAction(null);
+      setRejectionReason("");
     } catch (err) {
-      setError(err.message || "Failed to override violation");
+      setError("Failed to reject user");
     }
   };
 
-  return (
-    <div className="officer-container">
-      <div className="officer-header">
-        <h1>Officer Dashboard</h1>
-        <p className="officer-subtitle">Review and resolve objected violations</p>
+  const handleApproveProperty = async (propertyId) => {
+    try {
+      const response = await apiRequest(`/api/officer/approve-property/${propertyId}`, {
+        method: "POST",
+      });
+
+      setPendingProperties((prev) => prev.filter((p) => p._id !== propertyId));
+      setStats((prev) => ({
+        ...prev,
+        pending: { ...prev.pending, properties: prev.pending.properties - 1 },
+      }));
+      setSelectedForAction(null);
+    } catch (err) {
+      setError("Failed to approve property");
+    }
+  };
+
+  const handleRejectProperty = async (propertyId) => {
+    if (!rejectionReason.trim()) {
+      setError("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      const response = await apiRequest(`/api/officer/reject-property/${propertyId}`, {
+        method: "POST",
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      setPendingProperties((prev) => prev.filter((p) => p._id !== propertyId));
+      setStats((prev) => ({
+        ...prev,
+        pending: { ...prev.pending, properties: prev.pending.properties - 1 },
+      }));
+      setSelectedForAction(null);
+      setRejectionReason("");
+    } catch (err) {
+      setError("Failed to reject property");
+    }
+  };
+
+  const renderDashboard = () => (
+    <div className="dashboard">
+      <h2>Officer Control Panel</h2>
+      
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-number">{stats.pending.citizens}</div>
+          <div className="stat-label">Pending Citizens</div>
+          <button
+            className="stat-btn"
+            onClick={() => setCurrentTab("citizens")}
+          >
+            Review
+          </button>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{stats.pending.owners}</div>
+          <div className="stat-label">Pending Owners</div>
+          <button
+            className="stat-btn"
+            onClick={() => setCurrentTab("owners")}
+          >
+            Review
+          </button>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{stats.pending.properties}</div>
+          <div className="stat-label">Pending Properties</div>
+          <button
+            className="stat-btn"
+            onClick={() => setCurrentTab("properties")}
+          >
+            Review
+          </button>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{stats.total.citizens}</div>
+          <div className="stat-label">Total Citizens</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{stats.total.owners}</div>
+          <div className="stat-label">Total Owners</div>
+        </div>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          <strong>Error:</strong> {error}
-        </div>
-      )}
+      <div className="quick-actions">
+        <h3>Quick Actions</h3>
+        <button className="btn btn-secondary" onClick={() => setCurrentTab("violations")}>
+          View Objected Violations ({stats.violations || 0})
+        </button>
+        <button className="btn btn-secondary" onClick={fetchDashboardData}>
+          Refresh All Data
+        </button>
+      </div>
+    </div>
+  );
 
-      {message && (
-        <div className="alert alert-success">
-          <strong>Success:</strong> {message}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-state">
-          <p>Loading objected violations...</p>
-        </div>
-      ) : violations.length === 0 ? (
+  const renderCitizens = () => (
+    <div className="approval-tab">
+      <h2>Pending Citizen Registrations</h2>
+      
+      {pendingCitizens.length === 0 ? (
         <div className="empty-state">
-          <h3>No Objected Violations</h3>
-          <p>All cases have been resolved. Check back later.</p>
+          <p>No pending citizen registrations</p>
         </div>
       ) : (
-        <div className="violations-table-wrapper">
-          <table className="violations-table">
-            <thead>
-              <tr>
-                <th>Date Reported</th>
-                <th>Citizen Details</th>
-                <th>Violation Code</th>
-                <th>Description</th>
-                <th>Decision Snapshot</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {violations.map((v) => (
-                <tr key={v._id}>
-                  <td className="date-cell">
-                    {new Date(v.createdAt).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td>
-                    <div className="citizen-info">
-                      <div className="citizen-name">{v.reportedBy?.name || "N/A"}</div>
-                      <div className="citizen-email">{v.reportedBy?.email || "N/A"}</div>
-                    </div>
-                  </td>
-                  <td className="code-cell">
-                    <span className="violation-code">{v.violationType}</span>
-                  </td>
-                  <td className="desc-cell">{v.description || "No description provided"}</td>
-                  <td>
-                    {v.decision ? (
-                      <div className="decision-snapshot">
-                        <div>
-                          <strong>Decision:</strong> {v.decision.decision || "N/A"}
-                        </div>
-                        <div>
-                          <strong>Amount:</strong> ₹{v.decision.amount || 0}
-                        </div>
-                        {v.decision.ruleSnapshot && (
-                          <div>
-                            <strong>Rule:</strong> {v.decision.ruleSnapshot.title}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted">No decision data</span>
-                    )}
-                  </td>
-                  <td className="actions-cell">
-                    <button
-                      className="btn btn-confirm"
-                      onClick={() => handleConfirm(v._id)}
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      className="btn btn-override"
-                      onClick={() => setOverrideModal(v._id)}
-                    >
-                      Override
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {overrideModal && (
-        <div className="modal-overlay" onClick={() => setOverrideModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Override Violation</h3>
-            <p>Provide a reason for overriding this violation decision:</p>
-            <textarea
-              className="override-textarea"
-              rows="5"
-              value={overrideReason}
-              onChange={(e) => setOverrideReason(e.target.value)}
-              placeholder="Enter reason for override..."
-            />
-            <div className="modal-actions">
-              <button
-                className="btn btn-cancel"
-                onClick={() => {
-                  setOverrideModal(null);
-                  setOverrideReason("");
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-submit"
-                onClick={() => handleOverride(overrideModal)}
-              >
-                Submit Override
-              </button>
+        <div className="approval-list">
+          {pendingCitizens.map((citizen) => (
+            <div key={citizen._id} className="approval-item">
+              <div className="item-content">
+                <h3>{citizen.name}</h3>
+                <p>Email: {citizen.email}</p>
+                <p>Phone: {citizen.phone}</p>
+                <p>Status: Pending Approval</p>
+              </div>
+              <div className="item-actions">
+                <button
+                  className="btn btn-success"
+                  onClick={() => handleApproveCitizen(citizen._id)}
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    setSelectedForAction(citizen._id);
+                    setActionType("reject-citizen");
+                  }}
+                >
+                  ✕ Reject
+                </button>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
   );
-}
 
-export default Officer;
+  const renderOwners = () => (
+    <div className="approval-tab">
+      <h2>Pending Owner/Permit Holder Registrations</h2>
+      
+      {pendingOwners.length === 0 ? (
+        <div className="empty-state">
+          <p>No pending owner registrations</p>
+        </div>
+      ) : (
+        <div className="approval-list">
+          {pendingOwners.map((owner) => (
+            <div key={owner._id} className="approval-item">
+              <div className="item-content">
+                <h3>{owner.name}</h3>
+                <p>Email: {owner.email}</p>
+                <p>Phone: {owner.phone}</p>
+                <p>Address: {owner.address || "Not provided"}</p>
+                <p>Status: Pending Approval</p>
+              </div>
+              <div className="item-actions">
+                <button
+                  className="btn btn-success"
+                  onClick={() => handleApproveOwner(owner._id)}
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    setSelectedForAction(owner._id);
+                    setActionType("reject-owner");
+                  }}
+                >
+                  ✕ Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderProperties = () => (
+    <div className="approval-tab">
+      <h2>Pending Property Approvals</h2>
+      
+      {pendingProperties.length === 0 ? (
+        <div className="empty-state">
+          <p>No pending property approvals</p>
+        </div>
+      ) : (
+        <div className="approval-list">
+          {pendingProperties.map((property) => (
+            <div key={property._id} className="approval-item">
+              <div className="item-content">
+                <h3>{property.propertyName}</h3>
+                <p>Owner: {property.owner?.name || "Unknown"}</p>
+                <p>Type: {property.propertyType}</p>
+                <p>Address: {property.address}</p>
+                <p>Ward: {property.wardNumber}</p>
+                <p>Status: Pending Approval</p>
+              </div>
+              <div className="item-actions">
+                <button
+                  className="btn btn-success"
+                  onClick={() => handleApproveProperty(property._id)}
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    setSelectedForAction(property._id);
+                    setActionType("reject-property");
+                  }}
+                >
+                  ✕ Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderRejectionModal = () => (
+    <div className="modal-overlay" onClick={() => setSelectedForAction(null)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h3>Provide Rejection Reason</h3>
+        <textarea
+          value={rejectionReason}
+          onChange={(e) => setRejectionReason(e.target.value)}
+          placeholder="Enter reason for rejection..."
+          rows={4}
+        />
+        <div className="modal-actions">
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              if (actionType === "reject-citizen") {
+                handleRejectUser(selectedForAction);
+              } else if (actionType === "reject-owner") {
+                handleRejectUser(selectedForAction);
+              } else if (actionType === "reject-property") {
+                handleRejectProperty(selectedForAction);
+              }
+            }}
+          >
+            Confirm Rejection
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setSelectedForAction(null);
+              setRejectionReason("");
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Layout>
+      <div className="officer-container">
+        <div className="officer-nav">
+          <button
+            className={`nav-btn ${currentTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setCurrentTab("dashboard")}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`nav-btn ${currentTab === "citizens" ? "active" : ""}`}
+            onClick={() => setCurrentTab("citizens")}
+          >
+            Citizens ({pendingCitizens.length})
+          </button>
+          <button
+            className={`nav-btn ${currentTab === "owners" ? "active" : ""}`}
+            onClick={() => setCurrentTab("owners")}
+          >
+            Owners ({pendingOwners.length})
+          </button>
+          <button
+            className={`nav-btn ${currentTab === "properties" ? "active" : ""}`}
+            onClick={() => setCurrentTab("properties")}
+          >
+            Properties ({pendingProperties.length})
+          </button>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
+
+        {loading ? (
+          <div className="loading">Loading...</div>
+        ) : (
+          <>
+            {currentTab === "dashboard" && renderDashboard()}
+            {currentTab === "citizens" && renderCitizens()}
+            {currentTab === "owners" && renderOwners()}
+            {currentTab === "properties" && renderProperties()}
+          </>
+        )}
+
+        {selectedForAction && renderRejectionModal()}
+      </div>
+    </Layout>
+  );
+}
