@@ -41,4 +41,9 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for faster queries
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1, approved: 1 });
+userSchema.index({ createdAt: -1 });
+
 export default mongoose.model("User", userSchema);

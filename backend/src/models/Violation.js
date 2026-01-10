@@ -109,10 +109,25 @@ const violationSchema = new mongoose.Schema(
       ],
       default: "REPORTED",
     },
+
+    // Owner's objection text (set when they object to a violation)
+    objectionReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Indexes for faster queries and geospatial operations
+violationSchema.index({ reportedBy: 1, status: 1 });
+violationSchema.index({ relatedProperty: 1, status: 1 });
+violationSchema.index({ status: 1, createdAt: -1 });
+violationSchema.index({ locationGeo: "2dsphere" }); // Geospatial index
+violationSchema.index({ violationType: 1 });
+violationSchema.index({ createdAt: -1 });
 
 export default mongoose.model("Violation", violationSchema);

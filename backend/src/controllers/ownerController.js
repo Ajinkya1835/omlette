@@ -2,6 +2,7 @@
 import Violation from "../models/Violation.js";
 import Property from "../models/Property.js";
 import User from "../models/User.js";
+import Payment from "../models/Payment.js";
 
 // Get owner profile
 export const getOwnerProfile = async (req, res) => {
@@ -10,7 +11,7 @@ export const getOwnerProfile = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const user = await User.findById(req.user.userId).select("-password");
+    const user = await User.findById(req.user._id).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -30,7 +31,7 @@ export const updateOwnerProfile = async (req, res) => {
 
     const { name, email } = req.body;
 
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -46,7 +47,7 @@ export const updateOwnerProfile = async (req, res) => {
 
     await user.save();
 
-    const updatedUser = await User.findById(req.user.userId).select("-password");
+    const updatedUser = await User.findById(req.user._id).select("-password");
     res.json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -60,12 +61,15 @@ export const getOwnerProperties = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const properties = await Property.find({ owner: req.user.userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    // Get all properties and manually filter
+    const allProperties = await Property.find({}).sort({ createdAt: -1 }).lean();
+    const properties = allProperties.filter(p => p.owner.toString() === req.user._id.toString());
+
+    console.log(`Owner ${req.user._id} has ${properties.length} properties`);
 
     res.json(properties);
   } catch (error) {
+    console.error("Error fetching owner properties:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -97,7 +101,7 @@ export const addProperty = async (req, res) => {
     }
 
     const property = new Property({
-      owner: req.user.userId,
+      owner: req.user._id,
       propertyName,
       propertyType,
       address,
@@ -137,7 +141,7 @@ export const updateProperty = async (req, res) => {
     }
 
     // Verify ownership
-    if (property.owner.toString() !== req.user.userId) {
+    if (property.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to update this property" });
     }
 
@@ -165,6 +169,17 @@ export const updateProperty = async (req, res) => {
     if (permitValidTo) property.permitValidTo = permitValidTo;
     if (status) property.status = status;
 
+    // Update locationGeo if coordinates changed
+    if (latitude || longitude) {
+      property.locationGeo = {
+        type: "Point",
+        coordinates: [
+          parseFloat(longitude || property.longitude),
+          parseFloat(latitude || property.latitude)
+        ],
+      };
+    }
+
     await property.save();
 
     res.json({ message: "Property updated successfully", property });
@@ -180,29 +195,32 @@ export const getOwnerViolations = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Get all properties owned by this user
-    const ownedProperties = await Property.find({ owner: req.user.userId }).select("_id");
+    // Get all properties and manually filter (workaround for ObjectId matching issue)
+    const allProps = await Property.find({});
+    const ownedProperties = allProps.filter(p => p.owner.toString() === req.user._id.toString());
+    
+    console.log(`Owner ${req.user._id.toString()} has ${ownedProperties.length} properties`);
+
     const propertyIds = ownedProperties.map((p) => p._id);
 
-    // Find violations linked to owner's properties OR unlinked violations (backward compat)
+    // Find violations linked to owner's properties
     const violations = await Violation.find({
-      $or: [
-        { relatedProperty: { $in: propertyIds } },
-        { relatedProperty: { $exists: false } }, // Unlinked violations
-        { relatedProperty: null }, // Explicitly null
-      ],
+      relatedProperty: { $in: propertyIds },
       status: "AWAITING_OWNER",
     })
       .populate("reportedBy", "name email")
       .populate({
         path: "relatedProperty",
-        select: "propertyName propertyType address",
+        select: "propertyName propertyType address owner",
       })
       .sort({ createdAt: -1 })
       .lean();
 
+    console.log(`Found ${violations.length} violations for owner`);
+
     res.json(violations);
   } catch (error) {
+    console.error("Error fetching owner violations:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -224,16 +242,74 @@ export const acceptViolation = async (req, res) => {
       return res.status(400).json({ message: "Action not allowed on this violation" });
     }
 
-    if (violation.decision?.decision === "FINE") {
-      violation.status = "PAID";
-    } else {
-      violation.status = "CLOSED";
-    }
+    // Get owner's properties
+    const ownedProperties = await Property.find({ owner: req.user._id }).select("_id");
+    const propertyIds = ownedProperties.map((p) => p._id);
 
+    // Count previous paid/closed violations for this owner
+    const previousViolationsCount = await Violation.countDocuments({
+      relatedProperty: { $in: propertyIds },
+      status: { $in: ["PAID", "CLOSED"] },
+      _id: { $ne: violation._id } // Exclude current violation
+    });
+
+    console.log(`Owner has ${previousViolationsCount} previous violations`);
+
+    // Calculate multiplier: 2^(number of previous violations)
+    // 0 previous = 1x, 1 previous = 2x, 2 previous = 4x, 3 previous = 8x, etc.
+    const multiplier = Math.pow(2, previousViolationsCount);
+    
+    // Get base fine amount (default to 1000 if not set)
+    const baseFine = violation.decision?.amount || 1000;
+    const finalFine = baseFine * multiplier;
+
+    console.log(`Fine calculation: Base: ₹${baseFine} × ${multiplier}x = ₹${finalFine}`);
+
+    // Update violation decision with new amount
+    if (!violation.decision) {
+      violation.decision = {};
+    }
+    violation.decision.decision = "FINE";
+    violation.decision.amount = finalFine;
+
+    // Create payment record
+    const receiptNumber = `RCPT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    const payment = await Payment.create({
+      violation: violation._id,
+      payer: req.user._id,
+      amount: finalFine,
+      paymentMethod: "CASH",
+      transactionId: transactionId,
+      paymentReference: previousViolationsCount > 0 
+        ? `Repeat violation - ${multiplier}x multiplier applied (${previousViolationsCount} previous violations)` 
+        : "First violation",
+      status: "COMPLETED",
+      receiptNumber: receiptNumber,
+      paymentDate: new Date(),
+      notes: `Base fine: ₹${baseFine}, Multiplier: ${multiplier}x (${previousViolationsCount} previous violations), Final amount: ₹${finalFine}`,
+    });
+
+    console.log("✅ Payment created:", payment._id, "Receipt:", receiptNumber, "Amount:", finalFine);
+
+    violation.status = "PAID";
     await violation.save();
 
-    res.json({ message: "Violation accepted", violation });
+    res.json({ 
+      message: `Violation accepted. Fine: ₹${finalFine} (${multiplier}x multiplier for ${previousViolationsCount} previous violations)`, 
+      violation,
+      payment: {
+        receiptNumber,
+        amount: finalFine,
+        baseFine,
+        multiplier,
+        previousViolations: previousViolationsCount,
+        transactionId,
+      }
+    });
   } catch (error) {
+    console.error("Error accepting violation:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -264,6 +340,7 @@ export const objectViolation = async (req, res) => {
     violation.status = "OBJECTED";
     violation.decision.requiresHuman = true;
     violation.decision.overrideReason = reason;
+    violation.objectionReason = reason;
 
     await violation.save();
 

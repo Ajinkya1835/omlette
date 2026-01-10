@@ -317,6 +317,74 @@
   color: #065f46;
 }
 
+/* Violations map panel */
+.violations-map-panel {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+.violations-map {
+  min-height: 260px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.map-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 14px;
+}
+
+.map-legend {
+  background: #f9fbff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #4a4a4a;
+}
+
+.item-card.highlighted {
+  border-color: #0b3c5d;
+  box-shadow: 0 0 0 3px rgba(11, 60, 93, 0.12);
+}
+
+.media-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.media-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f7f7f7;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.media-item img,
+.media-item video {
+  border-radius: 4px;
+  object-fit: cover;
+  background: #000;
+}
+
+.media-link {
+  font-size: 12px;
+  color: #0b3c5d;
+  font-weight: 600;
+
 /* Loading */
 .loading {
   text-align: center;

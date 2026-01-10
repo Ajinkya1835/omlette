@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import apiRequest from "../api/api.js";
 import Layout from "../components/Layout.jsx";
 import MapSearchPanel from "../components/MapSearchPanel.jsx";
+import { loadGoogleMaps } from "../utils/googleMapsLoader.js";
 import "./Officer.css";
 
 export default function Officer({ onLogout }) {
@@ -15,6 +16,11 @@ export default function Officer({ onLogout }) {
   const [pendingCitizens, setPendingCitizens] = useState([]);
   const [pendingOwners, setPendingOwners] = useState([]);
   const [pendingProperties, setPendingProperties] = useState([]);
+  const [objectedViolations, setObjectedViolations] = useState([]);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const clusterMarkersRef = useRef([]);
+  const [selectedClusterKey, setSelectedClusterKey] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedForAction, setSelectedForAction] = useState(null);
@@ -24,6 +30,21 @@ export default function Officer({ onLogout }) {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (currentTab === "violations") {
+      fetchObjectedViolations();
+    }
+  }, [currentTab]);
+
+  useEffect(() => {
+    if (currentTab !== "violations") return;
+    if (!objectedViolations || objectedViolations.length === 0) {
+      clearClusterMarkers();
+      return;
+    }
+    renderViolationMap(objectedViolations);
+  }, [currentTab, objectedViolations]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -46,6 +67,118 @@ export default function Officer({ onLogout }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchObjectedViolations = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiRequest("/api/officer/violations");
+      const list = data.violations || [];
+      setObjectedViolations(list);
+      setStats((prev) => ({ ...prev, violations: list.length }));
+    } catch (err) {
+      setError("Failed to load objected violations");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearClusterMarkers = () => {
+    clusterMarkersRef.current.forEach((marker) => {
+      if (marker && marker.setMap) {
+        marker.setMap(null);
+      }
+    });
+    clusterMarkersRef.current = [];
+  };
+
+  const buildClusters = (list) => {
+    const buckets = new Map();
+    list.forEach((v) => {
+      const lat = parseFloat(v.location?.latitude);
+      const lng = parseFloat(v.location?.longitude);
+      if (isNaN(lat) || isNaN(lng)) return;
+      const key = `${lat.toFixed(2)}_${lng.toFixed(2)}`; // coarse bucket for clustering
+      if (!buckets.has(key)) {
+        buckets.set(key, { key, latSum: 0, lngSum: 0, count: 0, items: [] });
+      }
+      const bucket = buckets.get(key);
+      bucket.latSum += lat;
+      bucket.lngSum += lng;
+      bucket.count += 1;
+      bucket.items.push(v);
+    });
+
+    return Array.from(buckets.values()).map((b) => ({
+      key: b.key,
+      lat: b.latSum / b.count,
+      lng: b.lngSum / b.count,
+      items: b.items,
+    }));
+  };
+
+  const renderViolationMap = (list) => {
+    loadGoogleMaps((error) => {
+      if (error) {
+        console.error("Google Maps loading error:", error);
+        return;
+      }
+      if (!mapRef.current) return;
+
+      const clusters = buildClusters(list);
+
+      if (!mapInstanceRef.current) {
+        const fallbackCenter = clusters[0]
+          ? { lat: clusters[0].lat, lng: clusters[0].lng }
+          : { lat: 19.076, lng: 72.8777 };
+
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center: fallbackCenter,
+          zoom: clusters.length > 0 ? 11 : 5,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+      }
+
+      clearClusterMarkers();
+
+      if (clusters.length === 0) return;
+
+      const bounds = new window.google.maps.LatLngBounds();
+
+      clusters.forEach((cluster) => {
+        const marker = new window.google.maps.Marker({
+          position: { lat: cluster.lat, lng: cluster.lng },
+          map: mapInstanceRef.current,
+          label: `${cluster.items.length}`,
+          title: `${cluster.items.length} violation${cluster.items.length > 1 ? "s" : ""}`,
+        });
+
+        marker.addListener("click", () => {
+          setSelectedClusterKey(cluster.key);
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.panTo({ lat: cluster.lat, lng: cluster.lng });
+          }
+          const firstId = cluster.items[0]?._id;
+          if (firstId) {
+            const el = document.getElementById(`violation-${firstId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }
+        });
+
+        clusterMarkersRef.current.push(marker);
+        bounds.extend({ lat: cluster.lat, lng: cluster.lng });
+      });
+
+      if (!bounds.isEmpty()) {
+        mapInstanceRef.current.fitBounds(bounds);
+      }
+    });
   };
 
   const handleApproveCitizen = async (userId) => {
@@ -145,7 +278,39 @@ export default function Officer({ onLogout }) {
       setError("Failed to reject property");
     }
   };
+  const handleConfirmViolation = async (violationId) => {
+    try {
+      await apiRequest(`/api/officer/violations/${violationId}/confirm`, {
+        method: "POST",
+      });
+      setObjectedViolations((prev) => prev.filter((v) => v._id !== violationId));
+      setStats((prev) => ({
+        ...prev,
+        violations: Math.max(0, prev.violations - 1),
+      }));
+      setError("");
+    } catch (err) {
+      setError("Failed to confirm violation");
+      console.error(err);
+    }
+  };
 
+  const handleOverrideViolation = async (violationId) => {
+    try {
+      await apiRequest(`/api/officer/violations/${violationId}/override`, {
+        method: "POST",
+      });
+      setObjectedViolations((prev) => prev.filter((v) => v._id !== violationId));
+      setStats((prev) => ({
+        ...prev,
+        violations: Math.max(0, prev.violations - 1),
+      }));
+      setError("");
+    } catch (err) {
+      setError("Failed to override violation");
+      console.error(err);
+    }
+  };
   const renderDashboard = () => (
     <div className="dashboard">
       <h2>Officer Control Panel</h2>
@@ -206,6 +371,13 @@ export default function Officer({ onLogout }) {
       </div>
     </div>
   );
+
+  const getClusterKey = (violation) => {
+    const lat = parseFloat(violation.location?.latitude);
+    const lng = parseFloat(violation.location?.longitude);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return `${lat.toFixed(2)}_${lng.toFixed(2)}`;
+  };
 
   const renderCitizens = () => (
     <div className="approval-tab">
@@ -336,6 +508,108 @@ export default function Officer({ onLogout }) {
     </div>
   );
 
+  const renderViolations = () => (
+    <div className="section">
+      <h2>Objected Violations</h2>
+      <div className="violations-map-panel">
+        <div className="violations-map" ref={mapRef}>
+          {(!objectedViolations || objectedViolations.length === 0) && (
+            <div className="map-placeholder">No coordinates available</div>
+          )}
+        </div>
+        <div className="map-legend">
+          <p><strong>Cluster size</strong> shows as marker label. Click a marker to jump to the list below.</p>
+        </div>
+      </div>
+      {objectedViolations.length === 0 ? (
+        <div className="empty-state">
+          <p>No objected violations at this time</p>
+        </div>
+      ) : (
+        <div className="items-list">
+          {objectedViolations.map((violation) => (
+            <div
+              key={violation._id}
+              id={`violation-${violation._id}`}
+              className={`item-card ${selectedClusterKey && getClusterKey(violation) === selectedClusterKey ? "highlighted" : ""}`}
+            >
+              <div className="item-content">
+                <h3>Violation #{violation._id.slice(-6)}</h3>
+                <p><strong>Property:</strong> {violation.relatedProperty?.propertyName || "N/A"}</p>
+                <p><strong>Owner:</strong> {violation.relatedProperty?.owner?.name || "N/A"}</p>
+                <p><strong>Reported By:</strong> {violation.reportedBy?.name || "Anonymous"}</p>
+                <p><strong>Violation Type:</strong> {violation.violationType}</p>
+                <p><strong>Description:</strong> {violation.description}</p>
+                <p><strong>Objection Reason:</strong> {violation.objectionReason || violation.decision?.overrideReason || "No reason provided"}</p>
+                <p><strong>Fine Amount:</strong> ₹{violation.decision?.amount ?? 0}</p>
+                <p><strong>Owner History:</strong> {violation.ownerHistory?.total || 0} total / {violation.ownerHistory?.unpaid || 0} open</p>
+                <p><strong>Risk Score:</strong> {violation.ownerHistory?.riskScore ?? 0}</p>
+                {violation.location?.latitude && violation.location?.longitude && (
+                  <p>
+                    <strong>Location:</strong> {violation.location.latitude}, {violation.location.longitude} (
+                    <a
+                      href={`https://www.google.com/maps?q=${violation.location.latitude},${violation.location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open in Maps
+                    </a>
+                    )
+                  </p>
+                )}
+                <p><strong>Status:</strong> <span className="status-badge status-objected">OBJECTED</span></p>
+                {violation.media?.length > 0 && (
+                  <div className="media-list">
+                    <strong>Evidence:</strong>
+                    <div className="media-previews">
+                      {violation.media.map((m, idx) => (
+                        <div key={idx} className="media-item">
+                          {m.type === "VIDEO" ? (
+                            <video
+                              controls
+                              preload="metadata"
+                              width="220"
+                              height="140"
+                              poster={m.url}
+                            >
+                              <source src={m.url} type="video/mp4" />
+                              Your browser does not support the video tag.
+                            </video>
+                          ) : (
+                            <img src={m.url} alt={`Evidence ${idx + 1}`} loading="lazy" width="220" height="140" />
+                          )}
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="media-link">
+                            Open
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="item-actions">
+                <button
+                  className="btn btn-success"
+                  onClick={() => handleConfirmViolation(violation._id)}
+                  title="Confirm violation - owner must pay"
+                >
+                  ✓ Confirm Violation
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleOverrideViolation(violation._id)}
+                  title="Override objection - cancel violation"
+                >
+                  ✕ Override (Cancel)
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderRejectionModal = () => (
     <div className="modal-overlay" onClick={() => setSelectedForAction(null)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -404,6 +678,12 @@ export default function Officer({ onLogout }) {
             Properties ({pendingProperties.length})
           </button>
           <button
+            className={`nav-btn ${currentTab === "violations" ? "active" : ""}`}
+            onClick={() => setCurrentTab("violations")}
+          >
+            Objected Violations ({stats.violations || 0})
+          </button>
+          <button
             className={`nav-btn ${currentTab === "map" ? "active" : ""}`}
             onClick={() => setCurrentTab("map")}
           >
@@ -421,6 +701,7 @@ export default function Officer({ onLogout }) {
             {currentTab === "citizens" && renderCitizens()}
             {currentTab === "owners" && renderOwners()}
             {currentTab === "properties" && renderProperties()}
+            {currentTab === "violations" && renderViolations()}
             {currentTab === "map" && <MapSearchPanel userRole="OFFICER" />}
           </>
         )}

@@ -55,7 +55,7 @@ export default function OwnerRegister() {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          address: formData.businessName,
+          address: formData.address,
           role: "PERMIT_HOLDER",
         }),
       });

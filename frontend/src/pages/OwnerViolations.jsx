@@ -23,9 +23,12 @@ function OwnerViolations({ onNavigate }) {
     setLoading(true);
     setError("");
     try {
+      console.log("Fetching owner violations...");
       const data = await apiRequest("/api/owner/violations");
+      console.log("Violations received:", data);
       setViolations(Array.isArray(data) ? data : []);
     } catch (err) {
+      console.error("Error fetching violations:", err);
       setError(err.message || "Failed to fetch violations");
       setViolations([]);
     } finally {
@@ -291,21 +294,12 @@ function OwnerViolations({ onNavigate }) {
 
               {/* Actions */}
               <div className="violation-actions">
-                {violation.decision?.decision === "FINE" ? (
-                  <button
-                    className="btn btn-pay"
-                    onClick={() => handlePayment(violation)}
-                  >
-                    💳 Pay Fine ₹{violation.decision.amount}
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-accept"
-                    onClick={() => handleAccept(violation._id)}
-                  >
-                    Accept Decision
-                  </button>
-                )}
+                <button
+                  className="btn btn-pay"
+                  onClick={() => handlePayment(violation)}
+                >
+                  💳 Pay Fine ₹{violation.decision?.amount || 1000}
+                </button>
                 <button
                   className="btn btn-object"
                   onClick={() => setObjectModal(violation._id)}

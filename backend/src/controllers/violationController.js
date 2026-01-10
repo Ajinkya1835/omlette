@@ -79,6 +79,11 @@ export const getViolations = async (req, res) => {
 
     if (req.user.role === "CITIZEN") {
       filter.reportedBy = req.user._id;
+    } else if (req.user.role === "PERMIT_HOLDER") {
+      // Permit holders see violations related to their properties
+      const ownedProperties = await Property.find({ owner: req.user._id }).select("_id");
+      const propertyIds = ownedProperties.map((p) => p._id);
+      filter.relatedProperty = { $in: propertyIds };
     }
 
     const rawViolations = await Violation.find(filter)

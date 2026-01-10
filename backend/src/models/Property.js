@@ -65,11 +65,29 @@ const propertySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["ACTIVE", "SUSPENDED", "EXPIRED"],
+      enum: ["ACTIVE", "SUSPENDED", "EXPIRED", "PENDING_APPROVAL", "REJECTED"],
       default: "ACTIVE",
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvalDate: {
+      type: Date,
+    },
+    rejectionReason: {
+      type: String,
     },
   },
   { timestamps: true }
 );
+
+// Indexes for faster queries and geospatial operations
+propertySchema.index({ owner: 1, status: 1 });
+propertySchema.index({ status: 1 });
+propertySchema.index({ permitNumber: 1 });
+propertySchema.index({ locationGeo: "2dsphere" }); // Geospatial index
+propertySchema.index({ wardNumber: 1, zone: 1 });
+propertySchema.index({ createdAt: -1 });
 
 export default mongoose.model("Property", propertySchema);

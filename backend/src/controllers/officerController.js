@@ -2,6 +2,7 @@
 import Violation from "../models/Violation.js";
 import User from "../models/User.js";
 import Property from "../models/Property.js";
+import Notification from "../models/Notification.js";
 
 // VIOLATION MANAGEMENT
 export const getObjectedViolations = async (req, res) => {
@@ -10,7 +11,7 @@ export const getObjectedViolations = async (req, res) => {
       .populate("reportedBy", "name email")
       .populate({
         path: "relatedProperty",
-        select: "propertyName propertyType address",
+        select: "propertyName propertyType address owner",
         populate: {
           path: "owner",
           select: "name email phone",
@@ -19,7 +20,80 @@ export const getObjectedViolations = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json(violations);
+    // Build owner violation history counts
+    const ownerIds = Array.from(
+      new Set(
+        violations
+          .map((v) => v.relatedProperty?.owner?._id?.toString())
+          .filter(Boolean)
+      )
+    );
+
+    let ownerCountsMap = new Map();
+    if (ownerIds.length > 0) {
+      const ownerProperties = await Property.find({ owner: { $in: ownerIds } })
+        .select("_id owner")
+        .lean();
+
+      const propertyIds = ownerProperties.map((p) => p._id);
+
+      if (propertyIds.length > 0) {
+        const counts = await Violation.aggregate([
+          { $match: { relatedProperty: { $in: propertyIds } } },
+          {
+            $lookup: {
+              from: "properties",
+              localField: "relatedProperty",
+              foreignField: "_id",
+              as: "prop",
+            },
+          },
+          { $unwind: "$prop" },
+          {
+            $group: {
+              _id: "$prop.owner",
+              total: { $sum: 1 },
+              unpaid: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "PAID"] }, 0, 1],
+                },
+              },
+              violationTypes: { $push: "$violationType" },
+            },
+          },
+        ]);
+
+        ownerCountsMap = new Map(
+          counts.map((c) => {
+            const typeCounts = c.violationTypes?.reduce((acc, type) => {
+              if (!type) return acc;
+              acc[type] = (acc[type] || 0) + 1;
+              return acc;
+            }, {}) || {};
+
+            const repeatBonus = Object.values(typeCounts).reduce((sum, count) => {
+              return sum + (count > 1 ? count - 1 : 0);
+            }, 0);
+
+            const riskScore = c.unpaid * 2 + c.total + repeatBonus;
+
+            return [c._id.toString(), { total: c.total, unpaid: c.unpaid, riskScore }];
+          })
+        );
+      }
+    }
+
+    const enriched = violations.map((v) => {
+      const ownerId = v.relatedProperty?.owner?._id?.toString();
+      return {
+        ...v,
+        ownerHistory: ownerId
+          ? ownerCountsMap.get(ownerId) || { total: 0, unpaid: 0 }
+          : { total: 0, unpaid: 0 },
+      };
+    });
+
+    res.json({ violations: enriched });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -27,7 +101,11 @@ export const getObjectedViolations = async (req, res) => {
 
 export const confirmViolation = async (req, res) => {
   try {
-    const violation = await Violation.findById(req.params.id);
+    const violation = await Violation.findById(req.params.id).populate({
+      path: "relatedProperty",
+      select: "owner propertyName",
+      populate: { path: "owner", select: "name email phone" },
+    });
 
     if (!violation) {
       return res.status(404).json({ message: "Violation not found" });
@@ -43,6 +121,23 @@ export const confirmViolation = async (req, res) => {
 
     await violation.save();
 
+    const amount = violation.decision?.amount || 0;
+    const ownerId = violation.relatedProperty?.owner?._id;
+    if (ownerId) {
+      await Notification.create({
+        recipient: ownerId,
+        type: amount > 0 ? "PAYMENT_DUE" : "VIOLATION_STATUS_CHANGED",
+        title: amount > 0 ? "Payment due for confirmed violation" : "Violation confirmed",
+        message:
+          amount > 0
+            ? `Your objection for violation ${violation._id} was reviewed and the violation was confirmed. Fine amount: ₹${amount}. Please pay to close the case.`
+            : `Your objection for violation ${violation._id} was reviewed and the violation was confirmed. No payment is due.`,
+        link: "/owner/violations",
+        relatedEntity: { entityType: "VIOLATION", entityId: violation._id },
+        priority: amount > 0 ? "HIGH" : "MEDIUM",
+      });
+    }
+
     res.json({ message: "Violation confirmed", violation });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -53,11 +148,11 @@ export const overrideViolation = async (req, res) => {
   try {
     const { reason } = req.body;
 
-    if (!reason || reason.trim().length === 0) {
-      return res.status(400).json({ message: "Override reason is required" });
-    }
-
-    const violation = await Violation.findById(req.params.id);
+    const violation = await Violation.findById(req.params.id).populate({
+      path: "relatedProperty",
+      select: "owner propertyName",
+      populate: { path: "owner", select: "name email phone" },
+    });
 
     if (!violation) {
       return res.status(404).json({ message: "Violation not found" });
@@ -70,10 +165,23 @@ export const overrideViolation = async (req, res) => {
     violation.status = "CLOSED";
     violation.decision.decision = "OVERRIDDEN";
     violation.decision.requiresHuman = true;
-    violation.decision.overrideReason = reason;
+    violation.decision.overrideReason = reason || "Officer overridden the objection";
     violation.decision.amount = 0;
 
     await violation.save();
+
+    const ownerId = violation.relatedProperty?.owner?._id;
+    if (ownerId) {
+      await Notification.create({
+        recipient: ownerId,
+        type: "VIOLATION_STATUS_CHANGED",
+        title: "Violation overridden",
+        message: `Your objection for violation ${violation._id} was reviewed and the violation was waived. Reason: ${violation.decision.overrideReason}. No payment is due.`,
+        link: "/owner/violations",
+        relatedEntity: { entityType: "VIOLATION", entityId: violation._id },
+        priority: "MEDIUM",
+      });
+    }
 
     res.json({ message: "Violation overridden", violation });
   } catch (error) {
@@ -150,7 +258,7 @@ export const approveCitizen = async (req, res) => {
     }
 
     user.approved = true;
-    user.approvedBy = req.user.id;
+    user.approvedBy = req.user._id;
     user.approvalReason = "Approved by officer";
 
     await user.save();
@@ -182,7 +290,7 @@ export const approveOwner = async (req, res) => {
     }
 
     user.approved = true;
-    user.approvedBy = req.user.id;
+    user.approvedBy = req.user._id;
     user.approvalReason = "Approved by officer";
 
     await user.save();
@@ -252,7 +360,7 @@ export const approveProperty = async (req, res) => {
     }
 
     property.status = "ACTIVE";
-    property.approvedBy = req.user.id;
+    property.approvedBy = req.user._id;
     property.approvalDate = new Date();
 
     await property.save();
@@ -334,6 +442,8 @@ export const getDashboardStats = async (req, res) => {
       approved: true,
     });
 
+    const objectedViolations = await Violation.countDocuments({ status: "OBJECTED" });
+
     res.json({
       pending: {
         citizens: pendingCitizens,
@@ -348,6 +458,7 @@ export const getDashboardStats = async (req, res) => {
         citizens: pendingCitizens + approvedCitizens,
         owners: pendingOwners + approvedOwners,
       },
+      violations: objectedViolations,
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);

@@ -71,3 +71,13 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Spinner animation for loading states */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

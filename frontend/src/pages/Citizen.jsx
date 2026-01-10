@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import apiRequest, { apiUpload } from "../api/api.js";
 import Layout from "../components/Layout.jsx";
 import MapPicker from "../components/MapPicker.jsx";
+import CitizenProfile from "../components/CitizenProfile.jsx";
+import DashboardStats from "../components/DashboardStats.jsx";
+import ReportSteps from "../components/ReportSteps.jsx";
+import SubmissionModal from "../components/SubmissionModal.jsx";
+import ComplaintsTable from "../components/ComplaintsTable.jsx";
 
 function Citizen({ onLogout }) {
   /* ---------- RULE DATA ---------- */
@@ -30,6 +35,13 @@ function Citizen({ onLogout }) {
   /* ---------- UI ---------- */
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
+  const [confirmationChecked, setConfirmationChecked] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [submittedComplaint, setSubmittedComplaint] = useState(null);
+  
+  // Get user from localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   /* ---------- FETCH RULES ---------- */
   useEffect(() => {
@@ -113,19 +125,49 @@ function Citizen({ onLogout }) {
     fetchViolations();
   }, []);
 
+  /* ---------- STEP TRACKING ---------- */
+  useEffect(() => {
+    // Update step based on form completion
+    if (!selectedCategory) {
+      setCurrentStep(1);
+    } else if (!files.length) {
+      setCurrentStep(2);
+    } else if (!latitude || !longitude) {
+      setCurrentStep(3);
+    } else {
+      setCurrentStep(4);
+    }
+  }, [selectedCategory, files, latitude, longitude]);
+
   /* ---------- SUBMIT ---------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🚀 Form submitted!");
     setError("");
     setMessage("");
+    setLoading(true);
+
+    console.log("Validation checks:");
+    console.log("- selectedRuleCode:", selectedRuleCode);
+    console.log("- latitude:", latitude);
+    console.log("- longitude:", longitude);
+    console.log("- confirmationChecked:", confirmationChecked);
 
     if (!selectedRuleCode) {
       setError("Please select a violation type");
+      setLoading(false);
       return;
     }
 
     if (latitude === null || longitude === null) {
       setError("Location not available. Please enable location access.");
+      setLoading(false);
+      return;
+    }
+
+    if (!confirmationChecked) {
+      setError("Please confirm that the information provided is accurate");
+      setLoading(false);
       return;
     }
 
@@ -142,10 +184,21 @@ function Citizen({ onLogout }) {
 
     files.forEach((f) => formData.append("media", f));
 
-    try {
-      await apiUpload("/api/violations", formData);
+    console.log("Submitting violation:", {
+      violationType: selectedRuleCode,
+      latitude,
+      longitude,
+      filesCount: files.length
+    });
 
-      setMessage("✅ Violation reported successfully!");
+    try {
+      const response = await apiUpload("/api/violations", formData);
+      
+      console.log("✅ Violation submitted successfully:", response);
+      
+      // Store complaint data and show modal
+      setSubmittedComplaint(response);
+      setShowModal(true);
       
       // Reset form
       setDescription("");
@@ -153,6 +206,8 @@ function Citizen({ onLogout }) {
       setSelectedCategory("");
       setSelectedRuleCode("");
       setSelectedPropertyId(null);
+      setConfirmationChecked(false);
+      setCurrentStep(1);
       
       // Clear file input
       const fileInput = document.querySelector('input[type="file"]');
@@ -160,11 +215,11 @@ function Citizen({ onLogout }) {
 
       // Refresh violations list
       fetchViolations();
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setMessage(""), 5000);
     } catch (err) {
+      console.error("❌ Error submitting violation:", err);
       setError(err.message || "Failed to submit violation");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -172,96 +227,95 @@ function Citizen({ onLogout }) {
   return (
     <Layout onLogout={onLogout}>
       <div style={{ 
-        maxWidth: 1000, 
+        maxWidth: 1200, 
         margin: "0 auto", 
         padding: "30px 20px",
-        backgroundColor: "#f5f7fa"
+        backgroundColor: "#f8fafc"
       }}>
-        {/* Header */}
+        {/* Header with Profile */}
         <div style={{
-          backgroundColor: "white",
-          padding: "25px",
-          borderRadius: "12px",
-          marginBottom: "25px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "30px",
+          gap: "20px"
         }}>
-          <h2 style={{ 
-            margin: 0, 
-            marginBottom: "8px",
-          color: "#1a202c",
-          fontSize: "28px",
-          fontWeight: "600"
-        }}>
-          🏛️ Citizen Dashboard
-        </h2>
-        <p style={{ 
-          color: "#718096", 
-          margin: 0,
-          fontSize: "15px"
-        }}>
-          Report environmental violations in your area
-        </p>
-      </div>
+          <div style={{
+            backgroundColor: "white",
+            padding: "25px 30px",
+            borderRadius: "12px",
+            flex: 1,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            borderLeft: "4px solid #2c5282"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+              <span style={{ fontSize: "32px" }}>🏛️</span>
+              <h2 style={{ 
+                margin: 0,
+                color: "#1e3a5f",
+                fontSize: "28px",
+                fontWeight: "700"
+              }}>
+                Citizen Portal
+              </h2>
+            </div>
+            <p style={{ 
+              color: "#475569", 
+              margin: 0,
+              fontSize: "14px",
+              fontWeight: "500"
+            }}>
+              Public Violation Management System • Government of India Initiative
+            </p>
+          </div>
+          
+          <CitizenProfile user={user} onLogout={onLogout} />
+        </div>
 
-      {/* Tab Navigation */}
-      <div style={{
-        backgroundColor: "white",
-        borderRadius: "12px",
-        marginBottom: "25px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        overflow: "hidden"
-      }}>
-      </div>
+        {/* Dashboard Stats */}
+        <DashboardStats violations={violations} />
 
-      {/* Location Status */}
-      <div
-        style={{
-          padding: "14px 18px",
-          backgroundColor: locationStatus.includes("✓") ? "#d1fae5" : "#fef3c7",
-          border: `1px solid ${locationStatus.includes("✓") ? "#6ee7b7" : "#fcd34d"}`,
-          borderRadius: "8px",
-          marginBottom: "25px",
-          color: locationStatus.includes("✓") ? "#065f46" : "#92400e",
-          fontWeight: "500"
-        }}
-      >
-        📍 {locationStatus}
-      </div>
+        {/* Location Status */}
+        <div
+          style={{
+            padding: "14px 20px",
+            backgroundColor: locationStatus.includes("✓") ? "#ecfdf5" : "#fef9e7",
+            border: `1.5px solid ${locationStatus.includes("✓") ? "#6ee7b7" : "#fcd34d"}`,
+            borderRadius: "8px",
+            marginBottom: "25px",
+            color: locationStatus.includes("✓") ? "#065f46" : "#92400e",
+            fontWeight: "600",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}
+        >
+          📍 {locationStatus}
+        </div>
 
       {/* Error Message */}
       {error && (
         <div
           style={{
             padding: "16px 20px",
-            backgroundColor: "#fee2e2",
+            backgroundColor: "#fef2f2",
             color: "#991b1b",
-            border: "1px solid #fecaca",
+            border: "1.5px solid #fecaca",
             borderRadius: "8px",
             marginBottom: "25px",
-            fontWeight: "500"
+            fontWeight: "600",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
           }}
         >
-          ⚠️ {error}
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" />
+          </svg>
+          {error}
         </div>
       )}
-
-      {/* Success Message */}
-      {message && (
-        <div
-          style={{
-            padding: "16px 20px",
-            backgroundColor: "#d1fae5",
-            color: "#065f46",
-            border: "1px solid #6ee7b7",
-            borderRadius: "8px",
-            marginBottom: "25px",
-            fontWeight: "500"
-          }}
-        >
-          {message}
-        </div>
-      )}
-      {/* Tab Content */}
       {/* Report Form */}
       <div
         style={{
@@ -272,17 +326,42 @@ function Citizen({ onLogout }) {
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
         }}
       >
-        <h3 style={{ 
-          marginTop: 0, 
-          marginBottom: "25px",
-          color: "#1a202c",
-          fontSize: "22px",
-          fontWeight: "600"
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+          <div style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "12px",
+            background: "linear-gradient(135deg, #2c5282 0%, #1e40af 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "24px"
+          }}>
+            📝
+          </div>
+          <h3 style={{ 
+            margin: 0,
+            color: "#1e3a5f",
+            fontSize: "24px",
+            fontWeight: "700"
+          }}>
+            Report a Violation
+          </h3>
+        </div>
+        <p style={{
+          color: "#64748b",
+          margin: "0 0 24px 0",
+          fontSize: "14px"
         }}>
-          📝 Report a Violation
-        </h3>
-        
+          All information submitted will be verified by authorities. False reports may lead to legal action.
+        </p>
+
         <form onSubmit={handleSubmit}>
+
+        {/* Progress Steps */}
+        <ReportSteps currentStep={currentStep} />
+
           {/* Related Property Select */}
           <div style={{ marginBottom: "24px" }}>
             <label
@@ -421,11 +500,14 @@ function Citizen({ onLogout }) {
                 width: "100%",
                 padding: "12px 14px",
                 fontSize: "15px",
+                lineHeight: "1.6",
                 border: "2px solid #e2e8f0",
                 borderRadius: "8px",
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif",
                 color: "#2d3748",
-                resize: "vertical"
+                resize: "vertical",
+                fontWeight: "400",
+                letterSpacing: "0.01em"
               }}
             />
           </div>
@@ -506,33 +588,98 @@ function Citizen({ onLogout }) {
             )}
           </div>
 
+          {/* Confirmation Checkbox */}
+          <div style={{ 
+            marginBottom: "28px", 
+            padding: "20px", 
+            background: "#fef9e7", 
+            border: "2px solid #fcd34d", 
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(252, 211, 77, 0.2)"
+          }}>
+            <label style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "12px",
+              cursor: "pointer",
+              fontSize: "15px",
+              lineHeight: "1.6"
+            }}>
+              <input
+                type="checkbox"
+                checked={confirmationChecked}
+                onChange={(e) => {
+                  console.log("Checkbox clicked:", e.target.checked);
+                  setConfirmationChecked(e.target.checked);
+                }}
+                style={{
+                  marginTop: "4px",
+                  width: "20px",
+                  height: "20px",
+                  cursor: "pointer",
+                  accentColor: "#2c5282",
+                  flexShrink: 0
+                }}
+              />
+              <span style={{ color: "#92400e", fontWeight: "500" }}>
+                <strong style={{ fontSize: "16px" }}>⚠️ Declaration:</strong> I hereby confirm that the information provided above is true and accurate to the best of my knowledge. I understand that providing false information may result in legal consequences under applicable laws.
+              </span>
+            </label>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
+            disabled={!confirmationChecked || loading}
             style={{
-              padding: "14px 32px",
-              backgroundColor: "#3182ce",
+              width: "100%",
+              padding: "16px 32px",
+              backgroundColor: (confirmationChecked && !loading) ? "#2c5282" : "#cbd5e1",
               color: "white",
               border: "none",
               borderRadius: "8px",
               fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
+              fontWeight: "700",
+              cursor: (confirmationChecked && !loading) ? "pointer" : "not-allowed",
               transition: "all 0.2s",
-              boxShadow: "0 2px 4px rgba(49, 130, 206, 0.2)"
+              boxShadow: (confirmationChecked && !loading) ? "0 4px 12px rgba(44, 82, 130, 0.25)" : "none",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px"
             }}
             onMouseOver={(e) => {
-              e.target.style.backgroundColor = "#2c5282";
-              e.target.style.transform = "translateY(-1px)";
-              e.target.style.boxShadow = "0 4px 8px rgba(49, 130, 206, 0.3)";
+              if (confirmationChecked && !loading) {
+                e.target.style.backgroundColor = "#1e40af";
+                e.target.style.transform = "translateY(-2px)";
+                e.target.style.boxShadow = "0 6px 20px rgba(44, 82, 130, 0.35)";
+              }
             }}
             onMouseOut={(e) => {
-              e.target.style.backgroundColor = "#3182ce";
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "0 2px 4px rgba(49, 130, 206, 0.2)";
+              if (confirmationChecked && !loading) {
+                e.target.style.backgroundColor = "#2c5282";
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 4px 12px rgba(44, 82, 130, 0.25)";
+              }
             }}
           >
-            🚀 Submit Violation Report
+            {loading ? (
+              <>
+                <svg className="spinner" width="20" height="20" viewBox="0 0 50 50" style={{ animation: "spin 1s linear infinite" }}>
+                  <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="31.4 31.4" />
+                </svg>
+                Submitting...
+              </>
+            ) : (
+              <>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+                </svg>
+                Submit Official Complaint
+              </>
+            )}
           </button>
         </form>
       </div>
@@ -540,190 +687,96 @@ function Citizen({ onLogout }) {
       {/* My Complaints Section */}
       <div style={{
         backgroundColor: "white",
-        padding: "30px",
+        padding: "32px",
         borderRadius: "12px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        border: "1px solid #e2e8f0"
       }}>
-        <h3 style={{ 
-          marginTop: 0,
-          marginBottom: "20px",
-          color: "#1a202c",
-          fontSize: "22px",
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "24px"
+            }}>
+              📋
+            </div>
+            <div>
+              <h3 style={{ 
+                margin: 0,
+                color: "#1e3a5f",
+                fontSize: "24px",
+                fontWeight: "700"
+              }}>
+                My Complaints
+              </h3>
+              <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "13px" }}>
+                Track and manage your submitted violation reports
+              </p>
+            </div>
+          </div>
+          <div style={{
+            padding: "8px 16px",
+            background: "#eff6ff",
+            borderRadius: "20px",
+            fontSize: "14px",
+            fontWeight: "700",
+            color: "#2c5282"
+          }}>
+            Total: {violations.length}
+          </div>
+        </div>
+
+        <ComplaintsTable violations={violations} loading={loading} />
+      </div>
+
+      {/* Government Footer */}
+      <div style={{
+        marginTop: "40px",
+        padding: "24px",
+        background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0",
+        textAlign: "center"
+      }}>
+        <div style={{ marginBottom: "12px", opacity: 0.6 }}>
+          <svg width="40" height="40" viewBox="0 0 100 100" style={{ display: "inline-block" }}>
+            <circle cx="50" cy="50" r="45" fill="none" stroke="#2c5282" strokeWidth="3"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#2c5282" strokeWidth="2"/>
+            <circle cx="50" cy="50" r="25" fill="none" stroke="#2c5282" strokeWidth="2"/>
+            <circle cx="50" cy="50" r="4" fill="#2c5282"/>
+          </svg>
+        </div>
+        <p style={{
+          margin: "0 0 8px 0",
+          fontSize: "13px",
+          color: "#475569",
           fontWeight: "600"
         }}>
-          📋 My Complaints
-        </h3>
-
-        {loading ? (
-          <p style={{ 
-            textAlign: "center", 
-            padding: "40px", 
-            color: "#718096",
-            fontSize: "16px"
-          }}>
-            ⏳ Loading your complaints...
-          </p>
-        ) : violations.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "50px 20px",
-              backgroundColor: "#f7fafc",
-              borderRadius: "8px",
-              color: "#718096",
-            }}
-          >
-            <p style={{ fontSize: "18px", marginBottom: "10px", fontWeight: "500" }}>
-              📭 No complaints submitted yet
-            </p>
-            <p style={{ fontSize: "15px", margin: 0 }}>
-              Your reported violations will appear here
-            </p>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                backgroundColor: "white",
-                borderRadius: "8px",
-                overflow: "hidden",
-                border: "1px solid #e2e8f0"
-              }}
-            >
-              <thead>
-                <tr style={{ backgroundColor: "#f7fafc" }}>
-                  <th style={{ 
-                    padding: "16px 20px", 
-                    textAlign: "left", 
-                    borderBottom: "2px solid #e2e8f0",
-                    color: "#2d3748",
-                    fontWeight: "600",
-                    fontSize: "14px"
-                  }}>
-                    📅 Date
-                  </th>
-                  <th style={{ 
-                    padding: "16px 20px", 
-                    textAlign: "left", 
-                    borderBottom: "2px solid #e2e8f0",
-                    color: "#2d3748",
-                    fontWeight: "600",
-                    fontSize: "14px"
-                  }}>
-                    🏷️ Rule Code
-                  </th>
-                  <th style={{ 
-                    padding: "16px 20px", 
-                    textAlign: "left", 
-                    borderBottom: "2px solid #e2e8f0",
-                    color: "#2d3748",
-                    fontWeight: "600",
-                    fontSize: "14px"
-                  }}>
-                    🏢 Property
-                  </th>
-                  <th style={{ 
-                    padding: "16px 20px", 
-                    textAlign: "left", 
-                    borderBottom: "2px solid #e2e8f0",
-                    color: "#2d3748",
-                    fontWeight: "600",
-                    fontSize: "14px"
-                  }}>
-                    📊 Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {violations.map((v, i) => (
-                  <tr
-                    key={v?._id || i}
-                    style={{
-                      borderBottom: i !== violations.length - 1 ? "1px solid #e2e8f0" : "none",
-                      transition: "background-color 0.2s"
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f7fafc"}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
-                  >
-                    <td style={{ 
-                      padding: "16px 20px",
-                      color: "#4a5568",
-                      fontSize: "14px"
-                    }}>
-                      {v?.createdAt
-                        ? new Date(v.createdAt).toLocaleString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "—"}
-                    </td>
-                    <td style={{ 
-                      padding: "16px 20px", 
-                      fontWeight: "600",
-                      color: "#2d3748",
-                      fontSize: "14px"
-                    }}>
-                      {v?.violationType ?? "UNKNOWN"}
-                    </td>
-                    <td style={{ 
-                      padding: "16px 20px",
-                      color: "#4a5568",
-                      fontSize: "13px"
-                    }}>
-                      {v?.relatedProperty?.propertyName ? (
-                        <div>
-                          <div style={{ fontWeight: "500", color: "#2d3748" }}>
-                            {v.relatedProperty.propertyName}
-                          </div>
-                          <div style={{ fontSize: "12px", color: "#718096" }}>
-                            {v.relatedProperty.propertyType}
-                          </div>
-                        </div>
-                      ) : (
-                        <span style={{ color: "#a0aec0", fontStyle: "italic" }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "16px 20px" }}>
-                      <span
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: "20px",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                          backgroundColor:
-                            v?.status === "AWAITING_OWNER"
-                              ? "#fef3c7"
-                              : v?.status === "PAID"
-                              ? "#d1fae5"
-                              : v?.status === "OBJECTED"
-                              ? "#fee2e2"
-                              : "#f3f4f6",
-                          color:
-                            v?.status === "AWAITING_OWNER"
-                              ? "#92400e"
-                              : v?.status === "PAID"
-                              ? "#065f46"
-                              : v?.status === "OBJECTED"
-                              ? "#991b1b"
-                              : "#4b5563",
-                        }}
-                      >
-                        {v?.status ?? "PENDING"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          🔒 Official Government Reporting Platform
+        </p>
+        <p style={{
+          margin: 0,
+          fontSize: "12px",
+          color: "#64748b",
+          lineHeight: "1.6"
+        }}>
+          All actions are logged and monitored for audit purposes • Data encrypted and securely stored<br/>
+          Public Violation Management System • Ministry of Urban Development
+        </p>
       </div>
+
+      {/* Submission Modal */}
+      <SubmissionModal 
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        complaintData={submittedComplaint}
+      />
       </div>
     </Layout>
   );

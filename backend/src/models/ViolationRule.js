@@ -17,4 +17,9 @@ const violationRuleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for faster queries
+violationRuleSchema.index({ violation_code: 1 });
+violationRuleSchema.index({ category: 1, severity: 1 });
+violationRuleSchema.index({ keywords: 1 });
+
 export default mongoose.model("ViolationRule", violationRuleSchema);

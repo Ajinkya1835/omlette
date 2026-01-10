@@ -41,7 +41,7 @@ export const searchViolationsOnMap = async (req, res) => {
     // Role-based access control
     if (req.user.role === "PERMIT_HOLDER") {
       // Owners can only see violations related to their properties
-      const userProperties = await Property.find({ owner: req.user.userId });
+      const userProperties = await Property.find({ owner: req.user._id });
       const propertyCoords = userProperties.map(p => ({
         lat: p.latitude,
         lng: p.longitude,
@@ -53,7 +53,7 @@ export const searchViolationsOnMap = async (req, res) => {
 
     if (req.user.role === "CITIZEN") {
       // Citizens can only see their own violations
-      query.reportedBy = req.user.userId;
+      query.reportedBy = req.user._id;
     }
 
     // Execute query
@@ -105,7 +105,7 @@ export const searchPropertiesOnMap = async (req, res) => {
     // Role-based filtering
     if (req.user.role === "PERMIT_HOLDER") {
       // Owners can only see their own properties
-      query.owner = req.user.userId;
+      query.owner = req.user._id;
     } else if (req.user.role === "CITIZEN") {
       // Citizens cannot access property map search
       return res.status(403).json({ message: "Access denied" });
@@ -187,8 +187,8 @@ export const getViolationClusters = async (req, res) => {
       {
         $group: {
           _id: {
-            lat: { $round: [{ $arrayElemAt: ["$location.latitude", 0] }, 2] },
-            lng: { $round: [{ $arrayElemAt: ["$location.longitude", 0] }, 2] },
+            lat: { $round: ["$location.latitude", 2] },
+            lng: { $round: ["$location.longitude", 2] },
           },
           count: { $sum: 1 },
           violations: { $push: "$_id" },
